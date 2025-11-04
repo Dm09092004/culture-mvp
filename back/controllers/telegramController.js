@@ -138,10 +138,20 @@ export const broadcastMessage = async (req, res) => {
 
     const results = await broadcastToSubscribers(message);
     
+    // Подсчитываем статистику
+    const successful = results.filter(r => r.success).length;
+    const total = results.length;
+
+    console.log(`📢 Telegram рассылка завершена: ${successful}/${total} успешно`);
+
     res.json({
       success: true,
-      message: `Сообщение отправлено ${results.length} подписчикам`,
-      data: results
+      message: `Сообщение отправлено ${successful} из ${total} подписчикам`,
+      data: {
+        results,
+        successful,
+        total
+      }
     });
   } catch (error) {
     console.error('Broadcast error:', error);

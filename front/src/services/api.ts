@@ -186,6 +186,50 @@ class ApiService {
       body: JSON.stringify(settings),
     });
   }
+
+  // Telegram endpoints
+  async broadcastTelegramMessage(message: string): Promise<
+    ApiResponse<{
+      results: Array<{
+        chatId: string;
+        email: string;
+        success: boolean;
+        error?: string;
+      }>;
+      successful: number;
+      total: number;
+    }>
+  > {
+    return this.request("/telegram/broadcast", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async sendTelegramTest(): Promise<ApiResponse<void>> {
+    return this.request("/telegram/test", {
+      method: "GET",
+    });
+  }
+
+  async getTelegramSubscribers(): Promise<
+    ApiResponse<
+      Array<{
+        id: string;
+        chatId: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        username: string;
+        subscribedAt: string;
+        isActive: boolean;
+      }>
+    >
+  > {
+    return this.request("/telegram/subscribers", {
+      method: "GET",
+    });
+  }
 }
 
 export default new ApiService();

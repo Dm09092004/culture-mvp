@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Send, Sparkles, Loader2, RefreshCw, Settings } from "lucide-react";
+import { Send, Sparkles, Loader2, RefreshCw, Settings, MessageCircle } from "lucide-react";
 import { useStore } from "../store/useStore";
 import emailjs from "@emailjs/browser";
 import { EMAILJS_CONFIG } from "../config/emailjs";
@@ -41,6 +41,20 @@ ${mission}
 С уважением, CultureOS`
 };
 
+// Типы для Telegram ответа
+interface TelegramBroadcastResult {
+  chatId: string;
+  email: string;
+  success: boolean;
+  error?: string;
+}
+
+interface TelegramBroadcastResponse {
+  results: TelegramBroadcastResult[];
+  successful: number;
+  total: number;
+}
+
 export default function Notifications() {
   const {
     settings,
@@ -54,6 +68,7 @@ export default function Notifications() {
   const { success, error, info } = useToastContext();
   
   const [isSending, setIsSending] = useState(false);
+  const [isSendingTelegram, setIsSendingTelegram] = useState(false);
   const [sendProgress, setSendProgress] = useState(0);
   const [currentMessage, setCurrentMessage] = useState("");
   const [currentValue, setCurrentValue] = useState({ title: "", description: "" });
@@ -65,15 +80,36 @@ export default function Notifications() {
   });
   const [showAISettings, setShowAISettings] = useState(false);
   const [isComponentMounted, setIsComponentMounted] = useState(false);
+  const [telegramSubscribers, setTelegramSubscribers] = useState(0);
+  const [telegramStatus, setTelegramStatus] = useState<{
+    botToken: string;
+    chatId: string;
+    totalSubscribers: number;
+    activeSubscribers: number;
+    environment: string;
+  } | null>(null);
 
   // Инициализация при загрузке компонента
   useEffect(() => {
     setIsComponentMounted(true);
     generateNewMessage();
+    loadTelegramStatus();
 
     return () => {
       setIsComponentMounted(false);
     };
+  }, []);
+
+  // Загрузка статуса Telegram
+  const loadTelegramStatus = useCallback(async () => {
+    try {
+      const response = await apiService.getTelegramSubscribers();
+      if (response.success && response.data) {
+        setTelegramSubscribers(response.data.length);
+      }
+    } catch (err) {
+      console.error("Ошибка загрузки статуса Telegram:", err);
+    }
   }, []);
 
   // Генерация нового сообщения через API
@@ -146,6 +182,52 @@ export default function Notifications() {
     return template(valueTitle, missionText || "Мы создаем прекрасную корпоративную культуру вместе!");
   }, []);
 
+  // Отправка в Telegram
+  const handleSendTelegram = async () => {
+    if (!currentMessage) {
+      error("Сначала сгенерируйте сообщение!");
+      return;
+    }
+
+    if (telegramSubscribers === 0) {
+      error("Нет подписчиков в Telegram!");
+      info("Сотрудники могут подписаться отправив /start боту");
+      return;
+    }
+
+    setIsSendingTelegram(true);
+
+    try {
+      // Форматируем сообщение для Telegram
+      const telegramMessage = `📧 <b>Уведомление от CultureOS</b>\n\n${currentMessage}\n\n---\n<em>Это сообщение отправлено автоматически</em>`;
+
+      const response = await apiService.broadcastTelegramMessage(telegramMessage);
+      
+      if (response.success && response.data) {
+        const { successful, total } = response.data;
+        
+        if (successful > 0) {
+          success(`✅ Сообщение отправлено ${successful} из ${total} подписчиков в Telegram`);
+          
+          addNotification({
+            type: "telegram_broadcast",
+            message: `Telegram: "${currentValue.title}" (${successful}/${total} подписчиков)`,
+            status: successful === total ? "sent" : "scheduled", // Используем существующий статус
+          });
+        } else {
+          error("Не удалось отправить сообщение ни одному подписчику");
+        }
+      } else {
+        error("Ошибка при отправке в Telegram");
+      }
+    } catch (err: any) {
+      console.error("Ошибка отправки в Telegram:", err);
+      error("Ошибка при отправке в Telegram");
+    } finally {
+      setIsSendingTelegram(false);
+    }
+  };
+
   const handleSend = async () => {
     if (employees.length === 0) {
       error("Добавьте сотрудников!");
@@ -216,7 +298,6 @@ export default function Notifications() {
   };
 
   const preview = currentMessage || "Сгенерируйте первое сообщение...";
-
 
   return (
     <div className="grid lg:grid-cols-3 gap-8">
@@ -388,9 +469,56 @@ export default function Notifications() {
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  <span>Отправить ({employees.length} чел.)</span>
+                  <span>Отправить email ({employees.length} чел.)</span>
                 </>
               )}
+            </button>
+
+            {/* НОВАЯ КНОПКА ДЛЯ TELEGRAM */}
+            <button
+              onClick={handleSendTelegram}
+              disabled={isSendingTelegram || !currentMessage || telegramSubscribers === 0}
+              className="w-full bg-telegram-500 hover:bg-telegram-600 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 disabled:opacity-50 transition-all duration-200"
+            >
+              {isSendingTelegram ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Отправка в Telegram...</span>
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-5 h-5" />
+                  <span>Отправить в Telegram ({telegramSubscribers} подписчиков)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* СТАТУС TELEGRAM */}
+        <div className="card bg-telegram-50 border-telegram-200">
+          <div className="flex items-center space-x-3 mb-3">
+            <MessageCircle className="w-6 h-6 text-telegram-600" />
+            <h3 className="font-semibold text-telegram-800">Telegram Бот</h3>
+          </div>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-telegram-700">Подписчиков:</span>
+              <span className="font-semibold text-telegram-800">
+                {telegramSubscribers}
+              </span>
+            </div>
+            
+            <div className="text-xs text-telegram-600">
+              Сотрудники могут подписаться отправив <code>/start</code> боту
+            </div>
+            
+            <button
+              onClick={loadTelegramStatus}
+              className="w-full mt-2 text-xs bg-telegram-100 hover:bg-telegram-200 text-telegram-700 py-1 px-2 rounded transition-colors"
+            >
+              Обновить статус
             </button>
           </div>
         </div>
@@ -399,7 +527,7 @@ export default function Notifications() {
         {isSending && (
           <div className="bg-gray-100 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Отправка...</span>
+              <span className="text-sm font-medium">Отправка email...</span>
               <span className="text-sm text-primary">
                 {Math.round(sendProgress)}%
               </span>
