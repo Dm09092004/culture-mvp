@@ -160,3 +160,31 @@ export const updateSettings = async (req, res) => {
     });
   }
 };
+// server/controllers/notificationsController.js - добавить метод
+export const sendScheduledNotifications = async (req, res) => {
+  try {
+    // Получаем настройки и сотрудников
+    const settings = await NotificationsModel.getSettings();
+    const employees = await EmployeesModel.getAll();
+    const culture = await CultureModel.get();
+    
+    if (employees.length === 0) {
+      return res.json({ success: true, message: 'No employees to notify' });
+    }
+
+    // Логика отправки по расписанию
+    const results = await sendBulkEmails(employees, culture, settings);
+    
+    // Сохраняем в историю
+    await NotificationsModel.add({
+      type: 'scheduled',
+      message: `Автоматическая рассылка: ${results.sent} отправлено`,
+      status: 'sent'
+    });
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    console.error('Scheduled notifications error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

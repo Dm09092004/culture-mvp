@@ -1,6 +1,5 @@
 import { ArrowRight, Zap, Users, Target, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
@@ -30,11 +29,12 @@ export default function Home() {
   return (
     <div className="space-y-20">
       {/* Hero */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+      <section
         className="text-center py-20"
+        style={{
+          opacity: 0,
+          animation: 'fadeIn 0.6s ease-out forwards'
+        }}
       >
         <h1 className="text-5xl md:text-6xl font-bold text-text mb-6">
           Сформируйте <span className="text-primary">корпоративную культуру</span><br />
@@ -47,24 +47,32 @@ export default function Home() {
           <span>Создать культуру</span>
           <ArrowRight className="w-5 h-5" />
         </Link>
-      </motion.section>
+      </section>
 
       {/* Features */}
       <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {features.map((f, i) => (
-          <motion.div
+          <div
             key={f.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1, duration: 0.5 }}
             className="card text-center"
+            style={{
+              opacity: 0,
+              animation: `fadeIn 0.5s ease-out ${i * 0.1}s forwards`
+            }}
           >
             <f.icon className="w-12 h-12 text-primary mx-auto mb-4" />
             <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
             <p className="text-gray-600 text-sm">{f.desc}</p>
-          </motion.div>
+          </div>
         ))}
       </section>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

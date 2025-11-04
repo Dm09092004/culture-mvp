@@ -1,6 +1,6 @@
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
-import dotenv from 'dotenv';
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
+import dotenv from "dotenv";
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -17,7 +17,12 @@ class GigaChatService {
 
   async getToken(forceRefresh = false) {
     // Если токен есть и не истек, и не запрошено принудительное обновление
-    if (this.token && this.tokenExpiry && Date.now() < this.tokenExpiry && !forceRefresh) {
+    if (
+      this.token &&
+      this.tokenExpiry &&
+      Date.now() < this.tokenExpiry &&
+      !forceRefresh
+    ) {
       return this.token;
     }
 
@@ -33,55 +38,60 @@ class GigaChatService {
     try {
       const rqUid = uuidv4();
 
-      console.log('Requesting new GigaChat token...', {
-        clientId: '019a4a71-aa2c-7238-a125-56f52048514a',
-        rqUid
+      console.log("Requesting new GigaChat token...", {
+        clientId: "019a4a71-aa2c-7238-a125-56f52048514a",
+        rqUid,
       });
 
       const response = await axios.post(
-        'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
+        "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
         `scope=${this.scope}`,
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
-            'RqUID': rqUid,
-            'Authorization': `Basic ${this.authKey}`
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+            RqUID: rqUid,
+            Authorization: `Basic ${this.authKey}`,
           },
-          httpsAgent: new (await import('https')).Agent({ 
-            rejectUnauthorized: false 
+          httpsAgent: new (
+            await import("https")
+          ).Agent({
+            rejectUnauthorized: false,
           }),
-          timeout: 10000
+          timeout: 10000,
         }
       );
 
       if (!response.data.access_token) {
-        throw new Error('No access token in response');
+        throw new Error("No access token in response");
       }
 
       this.token = response.data.access_token;
       // Токен действует 30 минут, устанавливаем expiry на 25 минут для запаса
-      this.tokenExpiry = Date.now() + (25 * 60 * 1000);
-      
-      console.log('GigaChat token obtained successfully, expires at:', new Date(this.tokenExpiry).toISOString());
+      this.tokenExpiry = Date.now() + 25 * 60 * 1000;
+
+      console.log(
+        "GigaChat token obtained successfully, expires at:",
+        new Date(this.tokenExpiry).toISOString()
+      );
 
       // Разрешаем все ожидающие запросы
       this.refreshQueue.forEach(({ resolve }) => resolve(this.token));
       this.refreshQueue = [];
-      
+
       return this.token;
     } catch (error) {
-      console.error('GigaChat token error:', {
+      console.error("GigaChat token error:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
-        headers: error.config?.headers // Логируем заголовки для отладки
+        headers: error.config?.headers, // Логируем заголовки для отладки
       });
 
       // Отклоняем все ожидающие запросы
       this.refreshQueue.forEach(({ reject }) => reject(error));
       this.refreshQueue = [];
-      
+
       throw new Error(`Failed to get GigaChat token: ${error.message}`);
     } finally {
       this.isRefreshing = false;
@@ -90,47 +100,49 @@ class GigaChatService {
 
   async chatWithGigaChat(token, userMessage) {
     try {
-      console.log('Sending request to GigaChat API...');
-      
+      console.log("Sending request to GigaChat API...");
+
       const response = await axios.post(
-        'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
+        "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
         {
           model: "GigaChat",
           messages: [{ role: "user", content: userMessage }],
           stream: false,
           repetition_penalty: 1,
           temperature: 0.7,
-          max_tokens: 1000
+          max_tokens: 1000,
         },
         {
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          httpsAgent: new (await import('https')).Agent({ 
-            rejectUnauthorized: false 
+          httpsAgent: new (
+            await import("https")
+          ).Agent({
+            rejectUnauthorized: false,
           }),
-          timeout: 30000
+          timeout: 30000,
         }
       );
 
-      console.log('GigaChat API response received');
+      console.log("GigaChat API response received");
       return response.data.choices[0].message.content;
     } catch (error) {
-      console.error('GigaChat API error:', {
+      console.error("GigaChat API error:", {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
       });
-      
+
       if (error.response?.status === 401) {
         // Токен истек, принудительно обновляем
         this.token = null;
         this.tokenExpiry = null;
-        throw new Error('Token expired, please retry');
+        throw new Error("Token expired, please retry");
       }
-      
+
       throw new Error(`GigaChat API request failed: ${error.message}`);
     }
   }
@@ -139,7 +151,7 @@ class GigaChatService {
     const prompt = `Проанализируй ответы сотрудников и создай корпоративные ценности и миссию компании.
 
 Ответы сотрудников:
-${answers.join('\n')}
+${answers.join("\n")}
 
 Верни ТОЛЬКО JSON в следующем формате:
 {
@@ -160,31 +172,36 @@ ${answers.join('\n')}
     while (retryCount <= maxRetries) {
       try {
         const token = await this.getToken(retryCount > 0);
-        console.log('Token obtained, sending analysis request...');
-        
+        console.log("Token obtained, sending analysis request...");
+
         const response = await this.chatWithGigaChat(token, prompt);
-        
-        console.log('Raw GigaChat response:', response);
-        
+
+        console.log("Raw GigaChat response:", response);
+
         const jsonMatch = response.match(/\{[\s\S]*\}/);
-        
+
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          console.log('Parsed analysis result:', parsed);
+          console.log("Parsed analysis result:", parsed);
           return parsed;
         } else {
-          throw new Error('Invalid JSON response from GigaChat');
+          throw new Error("Invalid JSON response from GigaChat");
         }
       } catch (error) {
         retryCount++;
-        console.error(`GigaChat analysis attempt ${retryCount} failed:`, error.message);
-        
+        console.error(
+          `GigaChat analysis attempt ${retryCount} failed:`,
+          error.message
+        );
+
         if (retryCount > maxRetries) {
-          throw new Error(`GigaChat analysis failed after ${maxRetries} retries: ${error.message}`);
+          throw new Error(
+            `GigaChat analysis failed after ${maxRetries} retries: ${error.message}`
+          );
         }
-        
+
         // Ждем перед повторной попыткой
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
       }
     }
   }
@@ -196,13 +213,48 @@ ${answers.join('\n')}
     return await this.getToken(true);
   }
 
+  // Добавьте этот метод в класс GigaChatService
+  async generateMessage(prompt) {
+    let retryCount = 0;
+    const maxRetries = 2;
+
+    while (retryCount <= maxRetries) {
+      try {
+        const token = await this.getToken(retryCount > 0);
+        console.log("Token obtained, sending message generation request...");
+
+        const response = await this.chatWithGigaChat(token, prompt);
+
+        console.log("Raw GigaChat response for message generation:", response);
+
+        return response;
+      } catch (error) {
+        retryCount++;
+        console.error(
+          `GigaChat message generation attempt ${retryCount} failed:`,
+          error.message
+        );
+
+        if (retryCount > maxRetries) {
+          throw new Error(
+            `GigaChat message generation failed after ${maxRetries} retries: ${error.message}`
+          );
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
+  }
+
   // Метод для проверки статуса токена
   getTokenStatus() {
     return {
       hasToken: !!this.token,
-      expiresAt: this.tokenExpiry ? new Date(this.tokenExpiry).toISOString() : null,
+      expiresAt: this.tokenExpiry
+        ? new Date(this.tokenExpiry).toISOString()
+        : null,
       isExpired: this.tokenExpiry ? Date.now() >= this.tokenExpiry : true,
-      timeUntilExpiry: this.tokenExpiry ? this.tokenExpiry - Date.now() : null
+      timeUntilExpiry: this.tokenExpiry ? this.tokenExpiry - Date.now() : null,
     };
   }
 }

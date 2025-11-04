@@ -7,10 +7,33 @@ import {
   Settings,
   AnalyzeCultureRequest,
   AddEmployeeRequest,
-  UpdateSettingsRequest
-} from '../types';
+  UpdateSettingsRequest,
+} from "../types";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:3001/api";
+
+// Добавьте эти типы в существующие
+export type GenerateMessageRequest = {
+  type: string;
+  valueTitle: string;
+  mission: string;
+  tone?: "friendly" | "professional" | "energetic" | "caring";
+  length?: "short" | "medium" | "long";
+};
+
+export type GenerateMessageData = {
+  message: string;
+  type: string;
+  valueTitle: string;
+  generated: boolean;
+};
+
+export type GenerateMessageResponse = {
+  success: boolean;
+  data: GenerateMessageData;
+  error?: string;
+};
 
 class ApiService {
   private baseURL: string;
@@ -19,13 +42,25 @@ class ApiService {
     this.baseURL = API_BASE_URL;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  // Добавьте этот метод в класс ApiService
+  async generateMessage(
+    request: GenerateMessageRequest
+  ): Promise<ApiResponse<GenerateMessageData>> {
+    return this.request<GenerateMessageData>("/messages/generate", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     // Создаем конфиг с правильной обработкой body
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options.headers,
       },
       ...options,
@@ -38,11 +73,11 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data: ApiResponse<T> = await response.json();
       return data;
     } catch (error) {
@@ -53,60 +88,68 @@ class ApiService {
 
   // Survey endpoints
   async getSurvey(): Promise<ApiResponse<SurveyState>> {
-    return this.request<SurveyState>('/survey');
+    return this.request<SurveyState>("/survey");
   }
 
-  async updateSurvey(updates: Partial<SurveyState>): Promise<ApiResponse<SurveyState>> {
-    return this.request<SurveyState>('/survey', {
-      method: 'PUT',
+  async updateSurvey(
+    updates: Partial<SurveyState>
+  ): Promise<ApiResponse<SurveyState>> {
+    return this.request<SurveyState>("/survey", {
+      method: "PUT",
       body: JSON.stringify(updates),
     });
   }
 
   async resetSurvey(): Promise<ApiResponse<SurveyState>> {
-    return this.request<SurveyState>('/survey/reset', { 
-      method: 'POST',
+    return this.request<SurveyState>("/survey/reset", {
+      method: "POST",
       body: JSON.stringify({}),
     });
   }
 
   // Culture endpoints
-  async analyzeCulture(request: AnalyzeCultureRequest): Promise<ApiResponse<CompanyCulture>> {
-    return this.request<CompanyCulture>('/culture/analyze', {
-      method: 'POST',
+  async analyzeCulture(
+    request: AnalyzeCultureRequest
+  ): Promise<ApiResponse<CompanyCulture>> {
+    return this.request<CompanyCulture>("/culture/analyze", {
+      method: "POST",
       body: JSON.stringify(request),
     });
   }
 
   async getCulture(): Promise<ApiResponse<CompanyCulture>> {
-    return this.request<CompanyCulture>('/culture');
+    return this.request<CompanyCulture>("/culture");
   }
 
   // Employees endpoints
   async getEmployees(): Promise<ApiResponse<Employee[]>> {
-    return this.request<Employee[]>('/employees');
+    return this.request<Employee[]>("/employees");
   }
 
-  async addEmployee(employee: AddEmployeeRequest): Promise<ApiResponse<Employee>> {
-    return this.request<Employee>('/employees', {
-      method: 'POST',
+  async addEmployee(
+    employee: AddEmployeeRequest
+  ): Promise<ApiResponse<Employee>> {
+    return this.request<Employee>("/employees", {
+      method: "POST",
       body: JSON.stringify(employee),
     });
   }
 
   async deleteEmployee(id: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/employees/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       body: JSON.stringify({}),
     });
   }
 
-  async importEmployees(file: File): Promise<ApiResponse<{ imported: Employee[]; errors: string[] }>> {
+  async importEmployees(
+    file: File
+  ): Promise<ApiResponse<{ imported: Employee[]; errors: string[] }>> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const response = await fetch(`${this.baseURL}/employees/import`, {
-      method: 'POST',
+      method: "POST",
       body: formData,
     });
 
@@ -119,23 +162,27 @@ class ApiService {
 
   // Notifications endpoints
   async getNotifications(): Promise<ApiResponse<Notification[]>> {
-    return this.request<Notification[]>('/notifications');
+    return this.request<Notification[]>("/notifications");
   }
 
-  async sendNotifications(notificationData: any): Promise<ApiResponse<{ notification: Notification; results: any }>> {
-    return this.request('/notifications/send', {
-      method: 'POST',
+  async sendNotifications(
+    notificationData: any
+  ): Promise<ApiResponse<{ notification: Notification; results: any }>> {
+    return this.request("/notifications/send", {
+      method: "POST",
       body: JSON.stringify(notificationData),
     });
   }
 
   async getSettings(): Promise<ApiResponse<Settings>> {
-    return this.request<Settings>('/notifications/settings');
+    return this.request<Settings>("/notifications/settings");
   }
 
-  async updateSettings(settings: UpdateSettingsRequest): Promise<ApiResponse<Settings>> {
-    return this.request<Settings>('/notifications/settings', {
-      method: 'PUT',
+  async updateSettings(
+    settings: UpdateSettingsRequest
+  ): Promise<ApiResponse<Settings>> {
+    return this.request<Settings>("/notifications/settings", {
+      method: "PUT",
       body: JSON.stringify(settings),
     });
   }

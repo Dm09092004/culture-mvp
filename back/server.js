@@ -11,6 +11,7 @@ import employeesRoutes from './routes/employees.js';
 import cultureRoutes from './routes/culture.js';
 import notificationsRoutes from './routes/notifications.js';
 import gigachatRouters from './routes/gigachat.js';
+import messageRoutes from './routes/messages.js';
 
 dotenv.config();
 
@@ -28,7 +29,7 @@ app.use(fileUpload({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   abortOnLimit: true
 }));
-// Routes
+app.use('/api/messages', messageRoutes);
 app.use('/api/survey', surveyRoutes);
 app.use('/api/employees', employeesRoutes);
 app.use('/api/culture', cultureRoutes);

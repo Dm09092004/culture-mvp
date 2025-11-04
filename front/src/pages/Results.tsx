@@ -86,9 +86,9 @@ export default function Results() {
 
   const displayCulture = culture || FallbackCulture;
 
-  return (
+  return  (
     <div className="space-y-12">
-      <motion.div className="text-center">
+      <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">
           Анализ культуры <Sparkles className="inline w-8 h-8 text-primary" />
         </h1>
@@ -103,7 +103,7 @@ export default function Results() {
             <span>Запустить анализ ИИ</span>
           </button>
         )}
-      </motion.div>
+      </div>
 
       {isAnalyzing ? (
         <div className="text-center py-20">
@@ -113,26 +113,51 @@ export default function Results() {
       ) : (
         <>
           <div className="grid md:grid-cols-3 gap-6">
-            {displayCulture.values.map((value) => (
-              <motion.div key={value.id} className="card text-center">
+            {displayCulture.values.map((value, index) => (
+              <div 
+                key={value.id} 
+                className="card text-center"
+                style={{
+                  opacity: 0,
+                  animation: `fadeIn 0.5s ease-out ${index * 0.1}s forwards`
+                }}
+              >
                 <div className="text-5xl mb-4">{value.icon}</div>
                 <h3 className="text-xl font-bold mb-2">{value.title}</h3>
                 <p className="text-gray-600">{value.description}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
 
-          <div className="card">
+          <div 
+            className="card"
+            style={{
+              opacity: 0,
+              animation: 'fadeIn 0.5s ease-out 0.3s forwards'
+            }}
+          >
             <h2 className="text-2xl font-bold mb-4">Миссия</h2>
             <p className="text-lg">{displayCulture.mission}</p>
           </div>
 
-          <div className="card">
+          <div 
+            className="card"
+            style={{
+              opacity: 0,
+              animation: 'fadeIn 0.5s ease-out 0.5s forwards'
+            }}
+          >
             <h2 className="text-2xl font-bold mb-4">Рекомендации</h2>
             <pre className="text-gray-700 whitespace-pre-wrap">{displayCulture.recommendations}</pre>
           </div>
 
-          <div className="text-center">
+          <div 
+            className="text-center"
+            style={{
+              opacity: 0,
+              animation: 'fadeIn 0.5s ease-out 0.7s forwards'
+            }}
+          >
             <Link to="/employees" className="btn-primary text-lg inline-flex items-center space-x-2">
               <span>Добавить сотрудников</span>
               <ArrowRight className="w-5 h-5" />
@@ -140,6 +165,13 @@ export default function Results() {
           </div>
         </>
       )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
