@@ -1,7 +1,7 @@
 // back/getChatId.js
 import axios from 'axios';
 
-const TELEGRAM_BOT_TOKEN = "8508178545:AAHr_i40uPVvvJzlO62Pykx20skTSSTTUyQ";
+const TELEGRAM_BOT_TOKEN = "";
 
 async function getChatId() {
   try {
