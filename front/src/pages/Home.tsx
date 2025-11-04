@@ -1,8 +1,10 @@
 import { ArrowRight, Zap, Users, Target, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const [isMounted, setIsMounted] = useState(false);
   const features = [
     { icon: Zap, title: 'За 5 минут', desc: 'Создайте культуру без долгих консультаций' },
     { icon: Target, title: 'На основе данных', desc: 'Анализ ответов сотрудников' },
@@ -10,12 +12,28 @@ export default function Home() {
     { icon: Heart, title: 'С душой', desc: 'Ценности, которые вдохновляют' },
   ];
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p>Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-20">
       {/* Hero */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
         className="text-center py-20"
       >
         <h1 className="text-5xl md:text-6xl font-bold text-text mb-6">
@@ -35,10 +53,10 @@ export default function Home() {
       <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {features.map((f, i) => (
           <motion.div
-            key={i}
+            key={f.title}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: i * 0.1, duration: 0.5 }}
             className="card text-center"
           >
             <f.icon className="w-12 h-12 text-primary mx-auto mb-4" />

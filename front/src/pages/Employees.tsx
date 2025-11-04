@@ -1,21 +1,22 @@
 import { useState } from 'react';
 import { Plus, Upload, Trash2, ArrowRight, Download } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useStore } from '../store/useStore'; // Теперь работает
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import * as XLSX from 'xlsx';  // ← НОВАЯ БИБЛИОТЕКА
+import * as XLSX from 'xlsx';
+import { Employee } from '../types'; // Добавляем импорт типа
 
 export default function Employees() {
-  const { employees, addEmployee, deleteEmployee } = useStore();
+  const { employees, addEmployee, deleteEmployee } = useStore(); // Теперь работает
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', department: '' });
 
   // === ЭКСПОРТ В EXCEL ===
   const exportToExcel = () => {
-    const data = employees.map(e => ({
-      Имя: e.name,
-      Email: e.email,
-      Отдел: e.department,
+    const data = employees.map((emp: Employee) => ({ // Добавляем тип
+      Имя: emp.name,
+      Email: emp.email,
+      Отдел: emp.department,
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -102,7 +103,7 @@ export default function Employees() {
               </tr>
             </thead>
             <tbody>
-              {employees.map((emp) => (
+              {employees.map((emp: Employee) => ( // Добавляем тип
                 <tr key={emp.id} className="border-b hover:bg-gray-50">
                   <td className="py-3 px-4">{emp.name}</td>
                   <td className="py-3 px-4">{emp.email}</td>

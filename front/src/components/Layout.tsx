@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, Bell, BarChart3, Sparkles } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { useEffect, useState } from 'react';
 
 const navItems = [
   { path: '/', label: 'Главная', icon: Home },
@@ -12,11 +13,24 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { currentStep, answers } = useStore();
+  const { currentStep, answers, loadSurvey } = useStore();
+  const [isMounted, setIsMounted] = useState(false);
   const totalSteps = 3;
-  const progress = location.pathname === '/survey' 
+  
+  // Рассчитываем прогресс только после монтирования
+  const progress = location.pathname === '/survey' && isMounted
     ? ((currentStep + 1) / (totalSteps + 1)) * 100 
     : 0;
+
+  // Загружаем данные опроса при монтировании
+  useEffect(() => {
+    const initialize = async () => {
+      await loadSurvey();
+      setIsMounted(true);
+    };
+    
+    initialize();
+  }, [loadSurvey]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,7 +61,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {progress > 0 && (
             <div className="h-1 bg-gray-200">
               <div
-                className="h-full bg-primary transition-all duration-300"
+                className="h-full bg-primary transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>

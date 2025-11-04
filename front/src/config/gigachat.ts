@@ -1,0 +1,5 @@
+// config/gigachat.ts
+export const GIGACHAT_CONFIG = {
+  authKey: "MDE5YTRhNzEtYWEyYy03MjM4LWExMjUtNTZmNTIwNDg1MTRhOjAzZTU1NDNkLWQ1MGQtNDVhMy1iYWU5LWE3ODkxY2Y4MzVkNA==",
+  scope: "GIGACHAT_API_PERS"
+};
