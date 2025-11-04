@@ -1,46 +1,99 @@
-import BaseModel from './BaseModel.js';
+import { BaseModel } from './BaseModel.js';
+import { Sequelize } from 'sequelize';
+import sequelize from '../database.js';
 
 class NotificationsModel extends BaseModel {
   constructor() {
-    super();
-    super.set('notifications', []); // Используем super.set
-    super.set('settings', { // Используем super.set
-      frequency: 'weekly',
-      types: ['value_reminder', 'mission_quote', 'team_shoutout']
+    super('Notification', {
+      id: {
+        type: Sequelize.DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+      },
+      type: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false
+      },
+      message: {
+        type: Sequelize.DataTypes.TEXT,
+        allowNull: false
+      },
+      status: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'sent'
+      },
+      date: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false
+      }
     });
-    this.nextId = 1;
+
+    this.settingsModel = sequelize.define('NotificationSettings', {
+      id: {
+        type: Sequelize.DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+      },
+      frequency: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'weekly'
+      },
+      types: {
+        type: Sequelize.DataTypes.JSON,
+        allowNull: false,
+        defaultValue: ['value_reminder', 'mission_quote', 'team_shoutout']
+      }
+    });
+  }
+
+  async init() {
+    await super.init();
+    await this.settingsModel.sync();
+    
+    // Создаем настройки по умолчанию если их нет
+    const existingSettings = await this.settingsModel.findOne();
+    if (!existingSettings) {
+      await this.settingsModel.create({
+        frequency: 'weekly',
+        types: ['value_reminder', 'mission_quote', 'team_shoutout']
+      });
+    }
+    
+    return this;
   }
 
   async getAll() {
-    return super.get('notifications') || []; // Используем super.get
+    const notifications = await this.model.findAll({
+      order: [['id', 'DESC']]
+    });
+    return notifications.map(notif => notif.toJSON());
   }
 
   async add(notificationData) {
-    const notifications = super.get('notifications') || []; // Используем super.get
-    const newNotification = {
-      id: this.nextId.toString(),
-      date: new Date().toLocaleDateString('ru-RU'),
-      status: 'sent',
-      ...notificationData
-    };
-    
-    notifications.unshift(newNotification); // Add to beginning
-    super.set('notifications', notifications); // Используем super.set
-    this.nextId++;
-    
-    return newNotification;
+    const newNotification = await this.model.create({
+      ...notificationData,
+      date: new Date().toLocaleDateString('ru-RU')
+    });
+    return newNotification.toJSON();
   }
 
   async getSettings() {
-    return super.get('settings'); // Используем super.get
+    const settings = await this.settingsModel.findOne();
+    return settings ? settings.toJSON() : null;
   }
 
   async updateSettings(newSettings) {
-    const currentSettings = super.get('settings'); // Используем super.get
-    const updatedSettings = { ...currentSettings, ...newSettings };
-    super.set('settings', updatedSettings); // Используем super.set
-    return updatedSettings;
+    const settings = await this.settingsModel.findOne();
+    if (settings) {
+      await settings.update(newSettings);
+      return settings.toJSON();
+    }
+    return null;
   }
 }
 
-export default new NotificationsModel();
+const notificationsModel = new NotificationsModel();
+await notificationsModel.init();
+export default notificationsModel;

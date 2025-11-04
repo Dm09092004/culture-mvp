@@ -1,51 +1,84 @@
-import BaseModel from './BaseModel.js';
+import { BaseModel } from './BaseModel.js';
+import { Sequelize } from 'sequelize';
 
 class EmployeesModel extends BaseModel {
   constructor() {
-    super();
-    super.set('employees', []);
-    this.nextId = 1;
+    super('Employee', {
+      id: {
+        type: Sequelize.DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+      },
+      name: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false
+      },
+      email: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false,
+        unique: true
+      },
+      department: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false
+      },
+      createdAt: {
+        type: Sequelize.DataTypes.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW
+      }
+    });
   }
 
   async getAll() {
-    return super.get('employees') || []; // Используем super.get
+    const employees = await this.model.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+    return employees.map(emp => emp.toJSON());
   }
 
   async add(employeeData) {
-    const employees = super.get('employees') || []; // Используем super.get
-    const newEmployee = {
-      id: this.nextId.toString(),
+    const newEmployee = await this.model.create({
       ...employeeData,
-      createdAt: new Date().toISOString()
-    };
-    
-    employees.push(newEmployee);
-    super.set('employees', employees); // Используем super.set
-    this.nextId++;
-    
-    return newEmployee;
+      createdAt: new Date()
+    });
+    return newEmployee.toJSON();
   }
 
   async delete(id) {
-    const employees = super.get('employees') || []; // Используем super.get
-    const filteredEmployees = employees.filter(emp => emp.id !== id);
-    super.set('employees', filteredEmployees); // Используем super.set
+    const result = await this.model.destroy({
+      where: { id }
+    });
+    return result > 0;
   }
 
   async import(employeesData) {
-    const currentEmployees = super.get('employees') || []; // Используем super.get
-    const newEmployees = employeesData.map(emp => ({
-      id: this.nextId.toString(),
-      ...emp,
-      createdAt: new Date().toISOString()
-    }));
+    const results = [];
+    
+    for (const empData of employeesData) {
+      try {
+        const employee = await this.add(empData);
+        results.push(employee);
+      } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+          console.warn(`Сотрудник с email ${empData.email} уже существует`);
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    return results;
+  }
 
-    const allEmployees = [...currentEmployees, ...newEmployees];
-    super.set('employees', allEmployees); // Используем super.set
-    this.nextId += newEmployees.length;
-
-    return newEmployees;
+  async findByEmail(email) {
+    const employee = await this.model.findOne({
+      where: { email: email.toLowerCase() }
+    });
+    return employee ? employee.toJSON() : null;
   }
 }
 
-export default new EmployeesModel();
+const employeesModel = new EmployeesModel();
+await employeesModel.init();
+export default employeesModel;

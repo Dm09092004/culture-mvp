@@ -11,6 +11,6 @@ const root = ReactDOM.createRoot(
 root.render(
   <>
     <App />
-    <Toaster position="top-right" /> // ← НОВАЯ СТРОКА
+    <Toaster position="top-right" />
   </>
 );

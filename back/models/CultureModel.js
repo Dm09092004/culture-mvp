@@ -1,18 +1,49 @@
-import BaseModel from './BaseModel.js';
+import { BaseModel } from './BaseModel.js';
+import { Sequelize } from 'sequelize';
 
 class CultureModel extends BaseModel {
   constructor() {
-    super();
-    // Initial state
-    super.set('culture', {
-      values: [],
-      mission: '',
-      recommendations: ''
+    super('Culture', {
+      id: {
+        type: Sequelize.DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+      },
+      values: {
+        type: Sequelize.DataTypes.JSON,
+        allowNull: false,
+        defaultValue: []
+      },
+      mission: {
+        type: Sequelize.DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: ''
+      },
+      recommendations: {
+        type: Sequelize.DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: ''
+      }
     });
   }
 
+  async init() {
+    await super.init();
+    // Создаем начальную запись если ее нет
+    const existing = await this.model.findOne();
+    if (!existing) {
+      await this.model.create({
+        values: [],
+        mission: '',
+        recommendations: ''
+      });
+    }
+    return this;
+  }
+
   async get() {
-    return super.get('culture'); // Используем super.get вместо this.get
+    const culture = await this.model.findOne();
+    return culture ? culture.toJSON() : null;
   }
 
   async saveAnalysis(analysis) {
@@ -23,9 +54,18 @@ class CultureModel extends BaseModel {
         id: (index + 1).toString()
       }))
     };
-    super.set('culture', cultureWithIds); // Используем super.set
-    return cultureWithIds;
+
+    const existing = await this.model.findOne();
+    if (existing) {
+      await existing.update(cultureWithIds);
+      return existing.toJSON();
+    } else {
+      const newRecord = await this.model.create(cultureWithIds);
+      return newRecord.toJSON();
+    }
   }
 }
 
-export default new CultureModel();
+const cultureModel = new CultureModel();
+await cultureModel.init();
+export default cultureModel;
