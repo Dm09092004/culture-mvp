@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
 
 export default function Survey() {
-  const { currentStep, answers, setAnswer, nextStep, prevStep } = useStore();
+  const { currentStep, nextStep, prevStep, answers, setAnswer } = useStore();
   const navigate = useNavigate();
   const question = surveyQuestions[currentStep];
   const selected = answers[currentStep];
