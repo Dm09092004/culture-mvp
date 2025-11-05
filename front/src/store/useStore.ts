@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import apiService from '../services/api';
 import {
   UIState,
@@ -9,7 +10,8 @@ import {
   Settings,
   LoadingState,
   AddEmployeeRequest,
-  UpdateSettingsRequest
+  UpdateSettingsRequest,
+  RegularNotification
 } from '../types';
 
 // UI Store для локального состояния
@@ -60,6 +62,7 @@ interface ServerStore {
   loadEmployees: () => Promise<Employee[]>;
   addEmployee: (employee: AddEmployeeRequest) => Promise<Employee>;
   deleteEmployee: (id: string) => Promise<void>;
+  updateEmployee: (id: string, updates: Partial<Omit<Employee, 'id'>>) => Promise<void>;
   
   // Notifications actions
   loadNotifications: () => Promise<Notification[]>;
@@ -218,6 +221,22 @@ export const useServerStore = create<ServerStore>((set, get) => ({
       throw error;
     }
   },
+
+  updateEmployee: async (id: string, updates: Partial<Omit<Employee, 'id'>>): Promise<void> => {
+    try {
+      // Если есть API для обновления сотрудника, используем его
+      // await apiService.updateEmployee(id, updates);
+      
+      // Пока обновляем локально
+      set(state => ({
+        employees: state.employees.map(emp =>
+          emp.id === id ? { ...emp, ...updates } : emp
+        )
+      }));
+    } catch (error) {
+      throw error;
+    }
+  },
   
   // Notifications actions
   loadNotifications: async (): Promise<Notification[]> => {
@@ -283,10 +302,59 @@ export const useServerStore = create<ServerStore>((set, get) => ({
   }
 }));
 
+// Local Store для обычных уведомлений с сохранением в localStorage
+interface LocalStore {
+  // Regular Notifications
+  regularNotifications: RegularNotification[];
+  
+  // Regular Notifications Actions
+  addRegularNotification: (notification: Omit<RegularNotification, 'id'>) => void;
+  updateRegularNotification: (id: string, updates: Partial<RegularNotification>) => void;
+  deleteRegularNotification: (id: string) => void;
+  toggleRegularNotification: (id: string) => void;
+}
+
+export const useLocalStore = create<LocalStore>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      regularNotifications: [],
+      
+      // Regular Notifications Actions
+      addRegularNotification: (notification) => set((state) => ({
+        regularNotifications: [...state.regularNotifications, { 
+          ...notification, 
+          id: Date.now().toString() 
+        }]
+      })),
+      
+      updateRegularNotification: (id, updates) => set((state) => ({
+        regularNotifications: state.regularNotifications.map(notif =>
+          notif.id === id ? { ...notif, ...updates } : notif
+        )
+      })),
+      
+      deleteRegularNotification: (id) => set((state) => ({
+        regularNotifications: state.regularNotifications.filter(notif => notif.id !== id)
+      })),
+      
+      toggleRegularNotification: (id) => set((state) => ({
+        regularNotifications: state.regularNotifications.map(notif =>
+          notif.id === id ? { ...notif, enabled: !notif.enabled } : notif
+        )
+      }))
+    }),
+    {
+      name: 'regular-notifications-storage',
+    }
+  )
+);
+
 // Совместимый store для обратной совместимости со старыми компонентами
 export const useStore = () => {
   const serverStore = useServerStore();
   const uiStore = useUIStore();
+  const localStore = useLocalStore();
 
   return {
     // Survey
@@ -304,20 +372,31 @@ export const useStore = () => {
     employees: serverStore.employees,
     addEmployee: serverStore.addEmployee,
     deleteEmployee: serverStore.deleteEmployee,
+    updateEmployee: serverStore.updateEmployee,
 
     // Notifications
     notifications: serverStore.notifications,
     settings: serverStore.settings || {
       frequency: 'weekly',
-      types: ['value_reminder', 'mission_quote', 'team_shoutout']
+      types: ['value_reminder', 'mission_quote', 'team_shoutout'],
+      regularNotificationsEnabled: true
     },
     updateSettings: serverStore.updateSettings,
     addNotification: serverStore.addNotification,
 
-    // Добавим методы для загрузки данных
+    // Regular Notifications
+    regularNotifications: localStore.regularNotifications,
+    addRegularNotification: localStore.addRegularNotification,
+    updateRegularNotification: localStore.updateRegularNotification,
+    deleteRegularNotification: localStore.deleteRegularNotification,
+    toggleRegularNotification: localStore.toggleRegularNotification,
+
+    // Loading states
+    loading: serverStore.loading,
+
+    // Data loading methods
     loadSurvey: serverStore.loadSurvey,
     loadCulture: serverStore.loadCulture,
-    loadEmployees: serverStore.loadEmployees,
-    loading: serverStore.loading
+    loadEmployees: serverStore.loadEmployees
   };
 };
