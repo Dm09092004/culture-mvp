@@ -408,3 +408,20 @@ export const setWebhook = async (webhookUrl) => {
     return { success: false, error: error.message };
   }
 };
+export const deleteWebhook = async () => {
+  if (!TELEGRAM_BOT_TOKEN) {
+    throw new Error('Telegram token not configured');
+  }
+
+  try {
+    const response = await axios.post(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook`
+    );
+
+    console.log('✅ Webhook удален');
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('❌ Ошибка удаления webhook:', error.message);
+    return { success: false, error: error.message };
+  }
+};

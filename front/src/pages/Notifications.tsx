@@ -1,5 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Send, Sparkles, Loader2, RefreshCw, Settings, MessageCircle, Bell, Calendar, Mail, Trash2, Filter } from "lucide-react";
+import { 
+  Send, 
+  Sparkles, 
+  Loader2, 
+  RefreshCw, 
+  Settings, 
+  MessageCircle, 
+  Bell, 
+  Calendar, 
+  Mail, 
+  Trash2, 
+  Filter,
+  Edit3,
+  Save,
+  X,
+  Wand2,
+  Type,
+  Zap,
+  Languages
+} from "lucide-react";
 import { useStore } from "../store/useStore";
 import emailjs from "@emailjs/browser";
 import { EMAILJS_CONFIG } from "../config/emailjs";
@@ -42,6 +61,10 @@ ${mission}
 С уважением, CultureOS`
 };
 
+// Типы для редактирования
+type EditMode = 'view' | 'edit';
+type AIEditType = 'improve' | 'shorten' | 'lengthen' | 'formal' | 'friendly' | 'fix_grammar' | 'rephrase';
+
 export default function Notifications() {
   const {
     settings,
@@ -64,8 +87,11 @@ export default function Notifications() {
   const [isSendingRegular, setIsSendingRegular] = useState(false);
   const [sendProgress, setSendProgress] = useState(0);
   const [currentMessage, setCurrentMessage] = useState("");
+  const [editedMessage, setEditedMessage] = useState("");
   const [currentValue, setCurrentValue] = useState({ title: "", description: "" });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditing, setIsEditing] = useState<EditMode>('view');
+  const [isAIEditing, setIsAIEditing] = useState(false);
   const [generationSettings, setGenerationSettings] = useState({
     tone: "friendly" as "friendly" | "professional" | "energetic" | "caring",
     length: "medium" as "short" | "medium" | "long",
@@ -80,6 +106,8 @@ export default function Notifications() {
   const [notificationHistory, setNotificationHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<'all' | 'email' | 'telegram'>('all');
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Загрузка истории уведомлений из localStorage
   const loadNotificationHistory = useCallback(() => {
@@ -159,6 +187,17 @@ export default function Notifications() {
     };
   }, [loadNotificationHistory]);
 
+  // Фокусировка на textarea при переходе в режим редактирования
+  useEffect(() => {
+    if (isEditing === 'edit' && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(
+        textareaRef.current.value.length,
+        textareaRef.current.value.length
+      );
+    }
+  }, [isEditing]);
+
   // Загрузка статуса Telegram
   const loadTelegramStatus = useCallback(async () => {
     try {
@@ -179,6 +218,7 @@ export default function Notifications() {
     }
 
     setIsGenerating(true);
+    setIsEditing('view');
 
     try {
       const activeTypes = settings.types.filter(type => 
@@ -223,6 +263,7 @@ export default function Notifications() {
       }
 
       setCurrentMessage(generatedMessage);
+      setEditedMessage(generatedMessage);
       
     } catch (err) {
       console.error("Ошибка генерации сообщения:", err);
@@ -236,6 +277,80 @@ export default function Notifications() {
     const template = FALLBACK_TEMPLATES[type as keyof typeof FALLBACK_TEMPLATES] || FALLBACK_TEMPLATES.value_reminder;
     return template(valueTitle, missionText || "Мы создаем прекрасную корпоративную культуру вместе!");
   }, []);
+
+  // Редактирование с помощью нейросети
+  const editWithAI = useCallback(async (editType: AIEditType) => {
+    if (!editedMessage.trim()) {
+      error("Нет сообщения для редактирования");
+      return;
+    }
+
+    setIsAIEditing(true);
+
+    try {
+      let instruction = '';
+      
+      switch (editType) {
+        case 'improve':
+          instruction = 'Улучши текст, сделай его более выразительным и грамотным, сохранив исходный смысл и тон.';
+          break;
+        case 'shorten':
+          instruction = 'Сократи текст, оставив только самую суть, но сохранив основное сообщение.';
+          break;
+        case 'lengthen':
+          instruction = 'Расширь текст, добавь больше деталей и развернутых формулировок, сохранив основную мысль.';
+          break;
+        case 'formal':
+          instruction = 'Сделай текст более формальным и профессиональным, подходящим для деловой переписки.';
+          break;
+        case 'friendly':
+          instruction = 'Сделай текст более дружелюбным, теплым и неформальным.';
+          break;
+        case 'fix_grammar':
+          instruction = 'Исправь грамматические, пунктуационные и стилистические ошибки в тексте.';
+          break;
+        case 'rephrase':
+          instruction = 'Перефразируй текст, сохранив смысл, но изменив формулировки.';
+          break;
+      }
+
+      const response = await apiService.editMessage({
+        message: editedMessage,
+        instruction,
+        currentValue: currentValue.title,
+        currentMission: mission
+      });
+
+      if (response.success && response.data) {
+        setEditedMessage(response.data.message);
+        success(`✅ Сообщение отредактировано нейросетью!`);
+      } else {
+        throw new Error(response.error || 'API returned unsuccessful response');
+      }
+    } catch (err: any) {
+      console.error("AI edit error:", err);
+      error("Ошибка при редактировании нейросетью");
+    } finally {
+      setIsAIEditing(false);
+    }
+  }, [editedMessage, currentValue.title, mission, success, error]);
+
+  // Переключение режимов редактирования/просмотра
+  const enterEditMode = useCallback(() => {
+    setEditedMessage(currentMessage);
+    setIsEditing('edit');
+  }, [currentMessage]);
+
+  const saveEdit = useCallback(() => {
+    setCurrentMessage(editedMessage);
+    setIsEditing('view');
+    success("✅ Сообщение сохранено");
+  }, [editedMessage, success]);
+
+  const cancelEdit = useCallback(() => {
+    setEditedMessage(currentMessage);
+    setIsEditing('view');
+  }, [currentMessage]);
 
   // Добавление уведомления в историю
   const addToHistory = useCallback((notification: any) => {
@@ -273,7 +388,9 @@ export default function Notifications() {
 
   // Отправка в Telegram
   const handleSendTelegram = async () => {
-    if (!currentMessage) {
+    const messageToSend = isEditing === 'edit' ? editedMessage : currentMessage;
+    
+    if (!messageToSend) {
       error("Сначала сгенерируйте сообщение!");
       return;
     }
@@ -287,7 +404,7 @@ export default function Notifications() {
     setIsSendingTelegram(true);
 
     try {
-      const telegramMessage = `📧 <b>Уведомление от CultureOS</b>\n\n${currentMessage}\n\n---\n<em>Это сообщение отправлено автоматически</em>`;
+      const telegramMessage = `📧 <b>Уведомление от CultureOS</b>\n\n${messageToSend}\n\n---\n<em>Это сообщение отправлено автоматически</em>`;
 
       const response = await apiService.broadcastTelegramMessage(telegramMessage);
       
@@ -301,7 +418,7 @@ export default function Notifications() {
           addToHistory({
             type: "telegram_broadcast",
             title: `Telegram: "${currentValue.title}"`,
-            message: currentMessage,
+            message: messageToSend,
             status: "sent",
             recipients: total,
             successCount: successful,
@@ -330,12 +447,14 @@ export default function Notifications() {
 
   // Отправка email
   const handleSend = async () => {
+    const messageToSend = isEditing === 'edit' ? editedMessage : currentMessage;
+    
     if (employees.length === 0) {
       error("Добавьте сотрудников!");
       return;
     }
 
-    if (!currentMessage) {
+    if (!messageToSend) {
       error("Сначала сгенерируйте сообщение!");
       return;
     }
@@ -349,7 +468,7 @@ export default function Notifications() {
       for (let i = 0; i < employees.length; i++) {
         const emp = employees[i];
         
-        const personalizedMessage = currentMessage.replace(/Привет!|Добрый день!|Приветствую!/, `Привет, ${emp.name}!`);
+        const personalizedMessage = messageToSend.replace(/Привет!|Добрый день!|Приветствую!/, `Привет, ${emp.name}!`);
 
         const params = {
           to_email: emp.email,
@@ -378,7 +497,7 @@ export default function Notifications() {
       addToHistory({
         type: "value_reminder",
         title: `Рассылка: "${currentValue.title}"`,
-        message: currentMessage,
+        message: messageToSend,
         status: failedCount === 0 ? "sent" : "partial",
         recipients: employees.length,
         successCount: sentCount,
@@ -857,11 +976,114 @@ export default function Notifications() {
                   </div>
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {preview}
+
+              {/* РЕЖИМ РЕДАКТИРОВАНИЯ */}
+              {isEditing === 'edit' ? (
+                <div className="space-y-4">
+                  {/* Панель инструментов редактирования */}
+                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
+                    <button
+                      onClick={() => editWithAI('improve')}
+                      disabled={isAIEditing}
+                      className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <Wand2 className="w-4 h-4 text-purple-600" />
+                      <span>Улучшить текст</span>
+                    </button>
+                    <button
+                      onClick={() => editWithAI('shorten')}
+                      disabled={isAIEditing}
+                      className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <Type className="w-4 h-4 text-blue-600" />
+                      <span>Сократить</span>
+                    </button>
+                    <button
+                      onClick={() => editWithAI('lengthen')}
+                      disabled={isAIEditing}
+                      className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <Zap className="w-4 h-4 text-yellow-600" />
+                      <span>Расширить</span>
+                    </button>
+                    <button
+                      onClick={() => editWithAI('formal')}
+                      disabled={isAIEditing}
+                      className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <Languages className="w-4 h-4 text-gray-600" />
+                      <span>Сделать формальным</span>
+                    </button>
+                    <button
+                      onClick={() => editWithAI('friendly')}
+                      disabled={isAIEditing}
+                      className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <Sparkles className="w-4 h-4 text-green-600" />
+                      <span>Сделать дружелюбным</span>
+                    </button>
+                  </div>
+
+                  {/* Индикатор загрузки AI */}
+                  {isAIEditing && (
+                    <div className="flex items-center justify-center py-2 bg-blue-50 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600 mr-2" />
+                      <span className="text-sm text-blue-600">Нейросеть редактирует сообщение...</span>
+                    </div>
+                  )}
+
+                  {/* Поле редактирования */}
+                  <textarea
+                    ref={textareaRef}
+                    value={editedMessage}
+                    onChange={(e) => setEditedMessage(e.target.value)}
+                    rows={12}
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-y font-mono text-sm"
+                    placeholder="Введите текст сообщения..."
+                  />
+
+                  {/* Кнопки управления редактированием */}
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <div className="text-sm text-gray-500">
+                      {editedMessage.length} символов
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={cancelEdit}
+                        className="btn-secondary flex items-center space-x-2"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Отмена</span>
+                      </button>
+                      <button
+                        onClick={saveEdit}
+                        className="btn-primary flex items-center space-x-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>Сохранить</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* РЕЖИМ ПРОСМОТРА */
+                <div>
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {preview}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={enterEditMode}
+                      className="btn-secondary flex items-center space-x-2"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>Редактировать сообщение</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ОБНОВЛЕННАЯ СЕКЦИЯ ИСТОРИИ РАССЫЛОК */}

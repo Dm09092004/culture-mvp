@@ -98,8 +98,12 @@ app.listen(PORT, () => {
   console.log(`📱 Telegram: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Configured' : '❌ Missing'}`);
   
   // Запускаем Telegram поллинг
-  telegramPoller.startPolling();
-  
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    console.log('🔄 Starting Telegram poller...');
+    telegramPoller.startPolling().catch(error => {
+      console.error('❌ Failed to start Telegram poller:', error.message);
+    });
+  }
 });
 
 // Graceful shutdown

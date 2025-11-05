@@ -51,6 +51,19 @@ class ApiService {
       body: JSON.stringify(request),
     });
   }
+
+  async editMessage(request: {
+    message: string;
+    instruction: string;
+    currentValue?: string;
+    currentMission?: string;
+  }): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>("/messages/edit", {
+      method: "POST",
+      body: JSON.stringify(request), // Сериализуем объект в JSON строку
+    });
+  }
+  
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}

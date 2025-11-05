@@ -123,3 +123,52 @@ ${mission}
 
   return templates[type] || templates.value_reminder;
 }
+
+export const editMessage = async (req, res) => {
+  try {
+    const { message, instruction, currentValue, currentMission } = req.body;
+
+    if (!message || !instruction) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message and instruction are required'
+      });
+    }
+
+    const prompt = `Отредактируй следующее сообщение для сотрудников компании. ${instruction}
+
+Исходное сообщение: "${message}"
+${currentValue ? `Текущая ценность: "${currentValue}"` : ''}
+${currentMission ? `Миссия компании: "${currentMission}"` : ''}
+
+Требования к редактированию:
+- Сохрани основной смысл сообщения
+- Сохрани тон и стиль
+- Не меняй структуру (переносы строк, абзацы)
+- Сохрани эмодзи если они уместны
+- Верни только отредактированный текст без дополнительных пояснений`;
+
+    let editedMessage;
+    try {
+      editedMessage = await GigaChatService.generateMessage(prompt);
+    } catch (gigaError) {
+      console.error('GigaChat edit failed:', gigaError.message);
+      // Fallback: возвращаем оригинальное сообщение
+      editedMessage = message;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        message: editedMessage
+      }
+    });
+
+  } catch (error) {
+    console.error('Edit message error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to edit message'
+    });
+  }
+};
