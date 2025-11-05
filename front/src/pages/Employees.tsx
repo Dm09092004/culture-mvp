@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Upload, Trash2, ArrowRight, Download, Loader2 } from 'lucide-react';
+import { Plus, Upload, Trash2, ArrowRight, Download, Loader2, Edit2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -12,12 +12,16 @@ export default function Employees() {
     employees, 
     addEmployee, 
     deleteEmployee, 
+    updateEmployee,
     loadEmployees,
     loading 
   } = useStore();
   
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [form, setForm] = useState({ name: '', email: '', department: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', department: '' });
   const [isImporting, setIsImporting] = useState(false);
 
   // Загружаем сотрудников при монтировании компонента
@@ -164,6 +168,32 @@ export default function Employees() {
     }
   };
 
+  const handleEditClick = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setEditForm({
+      name: employee.name,
+      email: employee.email,
+      department: employee.department
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingEmployee) return;
+
+    try {
+      await updateEmployee(editingEmployee.id, editForm);
+      setShowEditModal(false);
+      setEditingEmployee(null);
+      toast.success('Данные сотрудника обновлены');
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast.error('Ошибка при обновлении данных сотрудника');
+    }
+  };
+
   const handleDeleteEmployee = async (id: string) => {
     if (!window.confirm('Вы уверены, что хотите удалить сотрудника?')) {
       return;
@@ -257,13 +287,22 @@ export default function Employees() {
                   <td className="py-3 px-4">{emp.email}</td>
                   <td className="py-3 px-4">{emp.department}</td>
                   <td className="py-3 px-4">
-                    <button 
-                      onClick={() => handleDeleteEmployee(emp.id)} 
-                      className="text-red-600 hover:text-red-800 transition-colors"
-                      title="Удалить сотрудника"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => handleEditClick(emp)} 
+                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                        title="Редактировать сотрудника"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteEmployee(emp.id)} 
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                        title="Удалить сотрудника"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -342,6 +381,76 @@ export default function Employees() {
                   disabled={!form.name || !form.email || !form.department}
                 >
                   Сохранить
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Модалка редактирования */}
+      {showEditModal && editingEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl p-6 w-full max-w-md"
+          >
+            <h2 className="text-xl font-bold mb-4">Редактировать сотрудника</h2>
+            <form onSubmit={handleUpdateEmployee} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Имя *</label>
+                <input 
+                  type="text" 
+                  placeholder="Введите имя" 
+                  value={editForm.name} 
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} 
+                  className="input" 
+                  required 
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Email *</label>
+                <input 
+                  type="email" 
+                  placeholder="Введите email" 
+                  value={editForm.email} 
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} 
+                  className="input" 
+                  required 
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Отдел *</label>
+                <input 
+                  type="text" 
+                  placeholder="Введите отдел" 
+                  value={editForm.department} 
+                  onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} 
+                  className="input" 
+                  required 
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingEmployee(null);
+                  }} 
+                  className="btn-secondary"
+                >
+                  Отмена
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={!editForm.name || !editForm.email || !editForm.department}
+                >
+                  Сохранить изменения
                 </button>
               </div>
             </form>
