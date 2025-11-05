@@ -20,6 +20,7 @@ import cultureRoutes from './routes/culture.js';
 import notificationsRoutes from './routes/notifications.js';
 import gigachatRoutes from './routes/gigachat.js';
 import telegramRoutes from './routes/telegram.js';
+import messageRoutes from './routes/messages.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -53,6 +54,7 @@ app.use('/api/culture', cultureRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/gigachat', gigachatRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
