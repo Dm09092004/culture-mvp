@@ -32,6 +32,7 @@ export type ApiResponse<T = any> = {
   data?: T;
   error?: string;
 };
+
 export type CompanyCulture = {
   values: Value[];
   mission: string;
@@ -48,6 +49,7 @@ export type AddEmployeeRequest = {
   email: string;
   department: string;
 };
+
 // Store типы
 export type LoadingState = {
   survey: boolean;
@@ -74,4 +76,117 @@ export type SurveyState = {
 export type UpdateSettingsRequest = {
   frequency: 'daily' | 'weekly' | 'monthly';
   types: string[];
+};
+
+// Типы для обычных уведомлений
+export type RegularNotification = {
+  id: string;
+  type: 'lunch' | 'meeting' | 'reminder' | 'announcement' | 'custom';
+  title: string;
+  message: string;
+  time: string; // HH:mm format
+  days: number[]; // 0-6 (Sunday-Saturday)
+  enabled: boolean;
+  recipients: string[]; // employee emails or 'all'
+};
+
+// Расширенные типы для AppState
+export type AppState = {
+  // Survey
+  currentStep: number;
+  answers: string[];
+  
+  // Company Culture
+  values: Value[];
+  mission: string;
+  
+  // Employees
+  employees: Employee[];
+  
+  // Notifications
+  notifications: Notification[];
+  regularNotifications: RegularNotification[];
+  notificationSettings: Settings;
+  
+  // UI State
+  loading: LoadingState;
+  
+  // Actions
+  setAnswer: (index: number, answer: string) => Promise<void>;
+  nextStep: () => Promise<void>;
+  prevStep: () => Promise<void>;
+  addEmployee: (employee: AddEmployeeRequest) => void;
+  deleteEmployee: (id: string) => void;
+  updateEmployee: (id: string, updates: Partial<Omit<Employee, 'id'>>) => void;
+  updateMission: (mission: string) => void;
+  updateValue: (id: string, updates: Partial<Value>) => void;
+  addNotification: (notification: Omit<Notification, 'id'>) => void;
+  updateSettings: (settings: Partial<Settings>) => void;
+  
+  // Regular Notifications Actions
+  addRegularNotification: (notification: Omit<RegularNotification, 'id'>) => void;
+  updateRegularNotification: (id: string, updates: Partial<RegularNotification>) => void;
+  deleteRegularNotification: (id: string) => void;
+  toggleRegularNotification: (id: string) => void;
+  
+  // Loading states
+  setLoading: (key: keyof LoadingState, value: boolean) => void;
+};
+
+// Типы для серверного хранилища
+export type ServerState = {
+  survey: SurveyState | null;
+  culture: CompanyCulture | null;
+  employees: Employee[];
+  notifications: Notification[];
+  settings: Settings | null;
+  loading: LoadingState;
+  
+  // Survey actions
+  loadSurvey: () => Promise<SurveyState>;
+  updateSurvey: (updates: Partial<SurveyState>) => Promise<SurveyState>;
+  setAnswer: (index: number, answer: string) => Promise<void>;
+  nextStep: () => Promise<void>;
+  prevStep: () => Promise<void>;
+  
+  // Culture actions
+  loadCulture: () => Promise<CompanyCulture>;
+  analyzeCulture: (answers: string[]) => Promise<CompanyCulture>;
+  
+  // Employees actions
+  loadEmployees: () => Promise<Employee[]>;
+  addEmployee: (employee: AddEmployeeRequest) => Promise<Employee>;
+  deleteEmployee: (id: string) => Promise<void>;
+  updateEmployee: (id: string, updates: Partial<Omit<Employee, 'id'>>) => Promise<void>;
+  
+  // Notifications actions
+  loadNotifications: () => Promise<Notification[]>;
+  loadSettings: () => Promise<Settings>;
+  updateSettings: (settings: UpdateSettingsRequest) => Promise<Settings>;
+  sendNotifications: (notificationData: any) => Promise<void>;
+  addNotification: (notification: Omit<Notification, 'id' | 'date'>) => Promise<Notification>;
+  
+  // Loading states
+  setLoading: (key: keyof LoadingState, value: boolean) => void;
+};
+
+// Типы для UI хранилища
+export type UIStoreState = {
+  isLoading: boolean;
+  modals: {
+    addEmployee: boolean;
+    [key: string]: boolean;
+  };
+  setLoading: (loading: boolean) => void;
+  openModal: (modalName: string) => void;
+  closeModal: (modalName: string) => void;
+};
+
+// Типы для локального хранилища (обычные уведомления)
+export type LocalStoreState = {
+  regularNotifications: RegularNotification[];
+  addRegularNotification: (notification: Omit<RegularNotification, 'id'>) => void;
+  updateRegularNotification: (id: string, updates: Partial<RegularNotification>) => void;
+  deleteRegularNotification: (id: string) => void;
+  toggleRegularNotification: (id: string) => void;
 };
