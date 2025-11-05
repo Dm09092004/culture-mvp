@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import fileUpload from 'express-fileupload';
 import dotenv from 'dotenv';
+import './cron.js';
 import { initializeDatabase } from './database.js';
 
 // Загружаем переменные окружения

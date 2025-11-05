@@ -63,7 +63,7 @@ class ApiService {
       body: JSON.stringify(request), // Сериализуем объект в JSON строку
     });
   }
-  
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -200,6 +200,41 @@ class ApiService {
     });
   }
 
+  // Отправка мотивационных уведомлений
+  async sendMotivationalNotification(request: {
+    employees: Employee[];
+    message: string;
+    valueTitle: string;
+    mission: string;
+    type?: string;
+    subject?: string;
+    personalization?: boolean;
+  }): Promise<ApiResponse<{ notification: Notification; results: any }>> {
+    return this.request("/notifications/send", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Отправка обычных уведомлений
+  async sendRegularNotifications(request: {
+    notifications: any[];
+    employees: Employee[];
+  }): Promise<ApiResponse<any>> {
+    return this.request("/notifications/send-regular", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Отправка запланированных уведомлений
+  async sendScheduledNotifications(): Promise<ApiResponse<any>> {
+    return this.request("/notifications/send-scheduled", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
   // Telegram endpoints
   async broadcastTelegramMessage(message: string): Promise<
     ApiResponse<{
@@ -241,6 +276,51 @@ class ApiService {
   > {
     return this.request("/telegram/subscribers", {
       method: "GET",
+    });
+  }
+
+  // Получить все регулярные уведомления
+  async getRegularNotifications(): Promise<ApiResponse<any[]>> {
+    return this.request("/notifications/regular");
+  }
+
+  // Получить активные регулярные уведомления
+  async getActiveRegularNotifications(): Promise<ApiResponse<any[]>> {
+    return this.request("/notifications/regular/active");
+  }
+
+  // Создать регулярное уведомление
+  async createRegularNotification(
+    notification: any
+  ): Promise<ApiResponse<any>> {
+    return this.request("/notifications/regular", {
+      method: "POST",
+      body: JSON.stringify(notification),
+    });
+  }
+
+  // Обновить регулярное уведомление
+  async updateRegularNotification(
+    id: string,
+    updates: any
+  ): Promise<ApiResponse<any>> {
+    return this.request(`/notifications/regular/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  // Удалить регулярное уведомление
+  async deleteRegularNotification(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/notifications/regular/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Включить/выключить регулярное уведомление
+  async toggleRegularNotification(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/notifications/regular/${id}/toggle`, {
+      method: "PATCH",
     });
   }
 }

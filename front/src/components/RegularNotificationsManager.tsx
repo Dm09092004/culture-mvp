@@ -1,305 +1,407 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Clock, Calendar } from 'lucide-react';
-import { useStore } from '../store/useStore';
-import type { RegularNotification } from '../types';
+import { useEffect, useState } from "react";
+import { Plus, Calendar, Clock, Trash2, Edit3, ToggleLeft, ToggleRight } from "lucide-react";
+import { useStore } from "../store/useStore";
+import { useToastContext } from "../contexts/ToastContext";
 
-const notificationTypes = [
-  { value: 'lunch', label: 'Обед', emoji: '🍽️' },
-  { value: 'meeting', label: 'Совещание', emoji: '📅' },
-  { value: 'reminder', label: 'Напоминание', emoji: '⏰' },
-  { value: 'announcement', label: 'Объявление', emoji: '📢' },
-  { value: 'custom', label: 'Свое', emoji: '✏️' }
-];
-
-const daysOfWeek = [
-  { value: 0, label: 'Вс' },
-  { value: 1, label: 'Пн' },
-  { value: 2, label: 'Вт' },
-  { value: 3, label: 'Ср' },
-  { value: 4, label: 'Чт' },
-  { value: 5, label: 'Пт' },
-  { value: 6, label: 'Сб' }
-];
+interface RegularNotificationForm {
+  title: string;
+  message: string;
+  schedule: 'daily' | 'weekly' | 'monthly' | 'manual';
+  time: string;
+  dayOfWeek: number;
+  dayOfMonth: number;
+  enabled: boolean;
+}
 
 export default function RegularNotificationsManager() {
   const { 
     regularNotifications, 
     addRegularNotification, 
     updateRegularNotification, 
-    deleteRegularNotification,
+    deleteRegularNotification, 
     toggleRegularNotification,
-    employees 
+    loadRegularNotifications 
   } = useStore();
   
-  const [showModal, setShowModal] = useState(false);
-  const [editingNotification, setEditingNotification] = useState<RegularNotification | null>(null);
-  const [form, setForm] = useState({
-    type: 'reminder' as RegularNotification['type'],
+  const { success, error } = useToastContext();
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<RegularNotificationForm>({
     title: '',
     message: '',
-    time: '12:00',
-    days: [1, 2, 3, 4, 5], // Пн-Пт по умолчанию
-    enabled: true,
-    recipients: ['all']
+    schedule: 'manual',
+    time: '09:00',
+    dayOfWeek: 1, // Понедельник
+    dayOfMonth: 1,
+    enabled: true
   });
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Загрузка регулярных уведомлений при монтировании компонента
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await loadRegularNotifications();
+      } catch (error) {
+        console.error('Failed to load regular notifications:', error);
+        // error("Не удалось загрузить регулярные уведомления");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [loadRegularNotifications]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingNotification) {
-      updateRegularNotification(editingNotification.id, form);
-    } else {
-      addRegularNotification(form);
+    if (!form.title.trim() || !form.message.trim()) {
+      error("Заполните название и сообщение");
+      return;
     }
-    
-    setForm({
-      type: 'reminder',
-      title: '',
-      message: '',
-      time: '12:00',
-      days: [1, 2, 3, 4, 5],
-      enabled: true,
-      recipients: ['all']
-    });
-    setEditingNotification(null);
-    setShowModal(false);
+
+    // Подготавливаем данные для уведомления
+    const baseData = {
+      title: form.title.trim(),
+      message: form.message.trim(),
+      schedule: form.schedule,
+      enabled: form.enabled
+    };
+
+    // Добавляем опциональные поля в зависимости от типа расписания
+    const notificationData = {
+      ...baseData,
+      ...(form.schedule !== 'manual' && { time: form.time }),
+      ...(form.schedule === 'weekly' && { dayOfWeek: form.dayOfWeek }),
+      ...(form.schedule === 'monthly' && { dayOfMonth: form.dayOfMonth }),
+    };
+
+    if (editingId) {
+      // Для обновления
+      updateRegularNotification(editingId, notificationData);
+      success("Уведомление обновлено");
+    } else {
+      // Для создания
+      addRegularNotification(notificationData);
+      success("Уведомление создано");
+    }
+
+    resetForm();
   };
 
-  const handleEdit = (notification: RegularNotification) => {
-    setEditingNotification(notification);
+  const resetForm = () => {
     setForm({
-      type: notification.type,
+      title: '',
+      message: '',
+      schedule: 'manual',
+      time: '09:00',
+      dayOfWeek: 1,
+      dayOfMonth: 1,
+      enabled: true
+    });
+    setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (notification: any) => {
+    setForm({
       title: notification.title,
       message: notification.message,
-      time: notification.time,
-      days: notification.days,
-      enabled: notification.enabled,
-      recipients: notification.recipients
+      schedule: notification.schedule,
+      time: notification.time || '09:00',
+      dayOfWeek: notification.dayOfWeek || 1,
+      dayOfMonth: notification.dayOfMonth || 1,
+      enabled: notification.enabled
     });
-    setShowModal(true);
+    setEditingId(notification.id);
+    setShowForm(true);
   };
 
-  const handleAddNew = () => {
-    setEditingNotification(null);
-    setForm({
-      type: 'reminder',
-      title: '',
-      message: '',
-      time: '12:00',
-      days: [1, 2, 3, 4, 5],
-      enabled: true,
-      recipients: ['all']
+  const handleDelete = (id: string) => {
+    if (window.confirm("Удалить это уведомление?")) {
+      deleteRegularNotification(id);
+      success("Уведомление удалено");
+    }
+  };
+
+  const getScheduleText = (notification: any) => {
+    switch (notification.schedule) {
+      case 'daily':
+        return `Ежедневно в ${notification.time || '09:00'}`;
+      case 'weekly':
+        const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        return `Еженедельно в ${days[notification.dayOfWeek || 1]} в ${notification.time || '09:00'}`;
+      case 'monthly':
+        return `Ежемесячно ${notification.dayOfMonth || 1}-го в ${notification.time || '09:00'}`;
+      case 'manual':
+        return 'Ручная отправка';
+      default:
+        return 'Не указано';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
-    setShowModal(true);
-  };
-
-  const toggleDay = (day: number) => {
-    const newDays = form.days.includes(day)
-      ? form.days.filter(d => d !== day)
-      : [...form.days, day];
-    setForm({ ...form, days: newDays.sort() });
-  };
-
-  const getTypeEmoji = (type: string) => {
-    return notificationTypes.find(t => t.value === type)?.emoji || '📋';
-  };
-
-  const formatDays = (days: number[]) => {
-    if (days.length === 7) return 'Ежедневно';
-    if (days.length === 5 && days.every(d => [1,2,3,4,5].includes(d))) return 'По будням';
-    if (days.length === 2 && days.every(d => [0,6].includes(d))) return 'По выходным';
-    return days.map(d => daysOfWeek.find(day => day.value === d)?.label).join(', ');
   };
 
   return (
     <div className="space-y-6">
+      {/* Заголовок и кнопка добавления */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Обычные уведомления</h3>
+        <div>
+          <h2 className="text-2xl font-bold">Регулярные уведомления</h2>
+          <p className="text-gray-600">
+            Создавайте шаблоны для автоматической отправки
+          </p>
+        </div>
         <button
-          onClick={handleAddNew}
+          onClick={() => setShowForm(true)}
           className="btn-primary flex items-center space-x-2"
         >
           <Plus className="w-4 h-4" />
-          <span>Добавить уведомление</span>
+          <span>Создать уведомление</span>
         </button>
       </div>
 
-      {regularNotifications.length === 0 ? (
-        <div className="card text-center py-8">
-          <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-2">Нет обычных уведомлений</p>
-          <p className="text-sm text-gray-500">Добавьте уведомления о обедах, совещаниях и других событиях</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {regularNotifications.map((notification) => (
-            <div key={notification.id} className="card flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="text-2xl">
-                  {getTypeEmoji(notification.type)}
-                </div>
-                <div>
-                  <h4 className="font-semibold">{notification.title}</h4>
-                  <p className="text-sm text-gray-600">{notification.message}</p>
-                  <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-                    <span className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{notification.time}</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{formatDays(notification.days)}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => toggleRegularNotification(notification.id)}
-                  className="text-2xl text-gray-500 hover:text-primary"
-                  title={notification.enabled ? 'Отключить' : 'Включить'}
-                >
-                  {notification.enabled ? <ToggleRight className="text-primary" /> : <ToggleLeft />}
-                </button>
-                
-                <button
-                  onClick={() => handleEdit(notification)}
-                  className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg"
-                  title="Редактировать"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                
-                <button
-                  onClick={() => deleteRegularNotification(notification.id)}
-                  className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+      {/* Форма создания/редактирования */}
+      {showForm && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">
+            {editingId ? 'Редактировать уведомление' : 'Создать уведомление'}
+          </h3>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Название уведомления *
+              </label>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="input"
+                placeholder="Например: Еженедельный отчет"
+                required
+              />
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Модальное окно добавления/редактирования */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              {editingNotification ? 'Редактировать уведомление' : 'Добавить уведомление'}
-            </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Тип уведомления</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {notificationTypes.map((type) => (
-                    <button
-                      key={type.value}
-                      type="button"
-                      onClick={() => setForm({ ...form, type: type.value as any })}
-                      className={`p-3 border rounded-lg text-center transition-colors ${
-                        form.type === type.value
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-gray-300 hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="text-lg mb-1">{type.emoji}</div>
-                      <div className="text-xs">{type.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Сообщение *
+              </label>
+              <textarea
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                rows={4}
+                className="input"
+                placeholder="Текст уведомления..."
+                required
+              />
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Заголовок</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                <label className="block text-sm font-medium mb-2">
+                  Расписание
+                </label>
+                <select
+                  value={form.schedule}
+                  onChange={(e) => setForm({ ...form, schedule: e.target.value as any })}
                   className="input"
-                  placeholder="Например: Обед, Совещание..."
-                  required
-                />
+                >
+                  <option value="manual">Ручная отправка</option>
+                  <option value="daily">Ежедневно</option>
+                  <option value="weekly">Еженедельно</option>
+                  <option value="monthly">Ежемесячно</option>
+                </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Сообщение</label>
-                <textarea
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  rows={3}
-                  className="input resize-none"
-                  placeholder="Текст уведомления..."
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Время отправки</label>
+                <label className="block text-sm font-medium mb-2">
+                  Время отправки
+                </label>
                 <input
                   type="time"
                   value={form.time}
                   onChange={(e) => setForm({ ...form, time: e.target.value })}
                   className="input"
-                  required
+                  disabled={form.schedule === 'manual'}
                 />
               </div>
+            </div>
 
+            {form.schedule === 'weekly' && (
               <div>
-                <label className="block text-sm font-medium mb-2">Дни отправки</label>
-                <div className="flex flex-wrap gap-2">
-                  {daysOfWeek.map((day) => (
-                    <button
-                      key={day.value}
-                      type="button"
-                      onClick={() => toggleDay(day.value)}
-                      className={`px-3 py-2 border rounded-lg text-sm transition-colors ${
-                        form.days.includes(day.value)
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-gray-300 hover:border-primary/50'
-                      }`}
-                    >
-                      {day.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={form.enabled}
-                    onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                    className="w-4 h-4 text-primary rounded"
-                  />
-                  <span className="text-sm">Активно</span>
+                <label className="block text-sm font-medium mb-2">
+                  День недели
                 </label>
+                <select
+                  value={form.dayOfWeek}
+                  onChange={(e) => setForm({ ...form, dayOfWeek: parseInt(e.target.value) })}
+                  className="input"
+                >
+                  <option value={1}>Понедельник</option>
+                  <option value={2}>Вторник</option>
+                  <option value={3}>Среда</option>
+                  <option value={4}>Четверг</option>
+                  <option value={5}>Пятница</option>
+                  <option value={6}>Суббота</option>
+                  <option value={0}>Воскресенье</option>
+                </select>
               </div>
+            )}
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="btn-secondary"
+            {form.schedule === 'monthly' && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  День месяца
+                </label>
+                <select
+                  value={form.dayOfMonth}
+                  onChange={(e) => setForm({ ...form, dayOfMonth: parseInt(e.target.value) })}
+                  className="input"
                 >
-                  Отмена
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                >
-                  {editingNotification ? 'Сохранить' : 'Добавить'}
-                </button>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                    <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
               </div>
-            </form>
-          </div>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, enabled: !form.enabled })}
+                className="flex items-center space-x-2"
+              >
+                {form.enabled ? (
+                  <ToggleRight className="w-6 h-6 text-green-600" />
+                ) : (
+                  <ToggleLeft className="w-6 h-6 text-gray-400" />
+                )}
+                <span className="text-sm">
+                  {form.enabled ? 'Включено' : 'Выключено'}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="btn-secondary"
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                {editingId ? 'Обновить' : 'Создать'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
+
+      {/* Список уведомлений */}
+      <div className="card">
+        <h3 className="text-lg font-semibold mb-4">
+          Мои уведомления ({regularNotifications.length})
+        </h3>
+
+        {regularNotifications.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>Нет созданных уведомлений</p>
+            <p className="text-sm mt-1">Создайте первое уведомление</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {regularNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`p-4 border rounded-lg ${
+                  notification.enabled 
+                    ? 'border-green-200 bg-green-50' 
+                    : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h4 className="font-semibold">{notification.title}</h4>
+                      <button
+                        onClick={() => toggleRegularNotification(notification.id)}
+                        className="flex items-center space-x-1 text-sm"
+                      >
+                        {notification.enabled ? (
+                          <ToggleRight className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <ToggleLeft className="w-4 h-4 text-gray-400" />
+                        )}
+                        <span className="text-xs">
+                          {notification.enabled ? 'Включено' : 'Выключено'}
+                        </span>
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{getScheduleText(notification)}</span>
+                      </div>
+                      {notification.schedule !== 'manual' && (
+                        <div className="flex items-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{notification.time}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-sm text-gray-700 line-clamp-2 mb-2">
+                      {notification.message}
+                    </p>
+
+                    <div className="text-xs text-gray-500">
+                      Создано: {formatDate(notification.createdAt)}
+                      {notification.updatedAt !== notification.createdAt && (
+                        <span>, обновлено: {formatDate(notification.updatedAt)}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={() => handleEdit(notification)}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                      title="Редактировать"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(notification.id)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                      title="Удалить"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

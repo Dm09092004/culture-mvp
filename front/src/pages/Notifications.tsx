@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { 
-  Send, 
-  Sparkles, 
-  Loader2, 
-  RefreshCw, 
-  Settings, 
-  MessageCircle, 
-  Bell, 
-  Calendar, 
-  Mail, 
-  Trash2, 
+import {
+  Send,
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  Settings,
+  MessageCircle,
+  Bell,
+  Calendar,
+  Mail,
+  Trash2,
   Filter,
   Edit3,
   Save,
@@ -17,7 +17,7 @@ import {
   Wand2,
   Type,
   Zap,
-  Languages
+  Languages,
 } from "lucide-react";
 import { useStore } from "../store/useStore";
 import emailjs from "@emailjs/browser";
@@ -27,7 +27,7 @@ import apiService from "../services/api";
 import RegularNotificationsManager from "../components/RegularNotificationsManager";
 
 // Инициализация
-emailjs.init(EMAILJS_CONFIG.publicKey);
+// emailjs.init(EMAILJS_CONFIG.publicKey);
 
 const FALLBACK_TEMPLATES = {
   value_reminder: (value: string, mission: string) => `Привет! 🌟
@@ -58,12 +58,19 @@ ${mission}
 
 Спасибо за ваш вклад! 💙
 
-С уважением, CultureOS`
+С уважением, CultureOS`,
 };
 
 // Типы для редактирования
-type EditMode = 'view' | 'edit';
-type AIEditType = 'improve' | 'shorten' | 'lengthen' | 'formal' | 'friendly' | 'fix_grammar' | 'rephrase';
+type EditMode = "view" | "edit";
+type AIEditType =
+  | "improve"
+  | "shorten"
+  | "lengthen"
+  | "formal"
+  | "friendly"
+  | "fix_grammar"
+  | "rephrase";
 
 export default function Notifications() {
   const {
@@ -77,35 +84,42 @@ export default function Notifications() {
     addRegularNotification,
     updateRegularNotification,
     deleteRegularNotification,
-    toggleRegularNotification
+    toggleRegularNotification,
   } = useStore();
-  
+
   const { success, error, info } = useToastContext();
-  
+
   const [isSending, setIsSending] = useState(false);
   const [isSendingTelegram, setIsSendingTelegram] = useState(false);
   const [isSendingRegular, setIsSendingRegular] = useState(false);
   const [sendProgress, setSendProgress] = useState(0);
   const [currentMessage, setCurrentMessage] = useState("");
   const [editedMessage, setEditedMessage] = useState("");
-  const [currentValue, setCurrentValue] = useState({ title: "", description: "" });
+  const [currentValue, setCurrentValue] = useState({
+    title: "",
+    description: "",
+  });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isEditing, setIsEditing] = useState<EditMode>('view');
+  const [isEditing, setIsEditing] = useState<EditMode>("view");
   const [isAIEditing, setIsAIEditing] = useState(false);
   const [generationSettings, setGenerationSettings] = useState({
     tone: "friendly" as "friendly" | "professional" | "energetic" | "caring",
     length: "medium" as "short" | "medium" | "long",
-    useAI: true
+    useAI: true,
   });
   const [showAISettings, setShowAISettings] = useState(false);
   const [isComponentMounted, setIsComponentMounted] = useState(false);
   const [telegramSubscribers, setTelegramSubscribers] = useState(0);
-  const [activeTab, setActiveTab] = useState<'motivational' | 'regular'>('motivational');
-  
+  const [activeTab, setActiveTab] = useState<"motivational" | "regular">(
+    "motivational"
+  );
+
   // Новые состояния для истории уведомлений
   const [notificationHistory, setNotificationHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [historyFilter, setHistoryFilter] = useState<'all' | 'email' | 'telegram'>('all');
+  const [historyFilter, setHistoryFilter] = useState<
+    "all" | "email" | "telegram"
+  >("all");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -113,48 +127,51 @@ export default function Notifications() {
   const loadNotificationHistory = useCallback(() => {
     setIsLoadingHistory(true);
     try {
-      const savedHistory = localStorage.getItem('notificationHistory');
+      const savedHistory = localStorage.getItem("notificationHistory");
       if (savedHistory) {
         setNotificationHistory(JSON.parse(savedHistory));
       } else {
         // Моковые данные для демонстрации
         const mockHistory = [
           {
-            id: '1',
-            type: 'value_reminder',
+            id: "1",
+            type: "value_reminder",
             title: 'Напоминание о ценности "Развитие"',
-            message: 'Привет! 🌟\n\nСегодня хотели напомнить о нашей важной ценности: "Развитие".\n\nМы создаем прекрасную корпоративную культуру вместе!\n\nДавай воплотим это в наших действиях сегодня! 💪\n\nС уважением, CultureOS',
-            status: 'sent',
+            message:
+              'Привет! 🌟\n\nСегодня хотели напомнить о нашей важной ценности: "Развитие".\n\nМы создаем прекрасную корпоративную культуру вместе!\n\nДавай воплотим это в наших действиях сегодня! 💪\n\nС уважением, CultureOS',
+            status: "sent",
             date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             recipients: employees.length,
             successCount: Math.floor(employees.length * 0.9),
-            channel: 'email',
-            value: 'Развитие'
+            channel: "email",
+            value: "Развитие",
           },
           {
-            id: '2',
-            type: 'telegram_broadcast',
-            title: 'Мотивационное сообщение',
-            message: 'Добрый день! ✨\n\nНапоминаем о нашей общей миссии: "Мы создаем прекрасную корпоративную культуру вместе!".\n\nЦенность "Команда" помогает нам двигаться к этой цели.\n\nПродолжаем в том же духе! 🚀\n\nС уважением, CultureOS',
-            status: 'sent',
+            id: "2",
+            type: "telegram_broadcast",
+            title: "Мотивационное сообщение",
+            message:
+              'Добрый день! ✨\n\nНапоминаем о нашей общей миссии: "Мы создаем прекрасную корпоративную культуру вместе!".\n\nЦенность "Команда" помогает нам двигаться к этой цели.\n\nПродолжаем в том же духе! 🚀\n\nС уважением, CultureOS',
+            status: "sent",
             date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
             recipients: 8,
             successCount: 8,
-            channel: 'telegram',
-            value: 'Команда'
+            channel: "telegram",
+            value: "Команда",
           },
           {
-            id: '3',
-            type: 'regular_notification',
-            title: 'Еженедельный отчет',
-            message: 'Уважаемые коллеги!\n\nПредставляем вашему вниманию еженедельный отчет о наших достижениях...',
-            status: 'sent',
+            id: "3",
+            type: "regular_notification",
+            title: "Еженедельный отчет",
+            message:
+              "Уважаемые коллеги!\n\nПредставляем вашему вниманию еженедельный отчет о наших достижениях...",
+            status: "sent",
             date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             recipients: employees.length,
             successCount: employees.length,
-            channel: 'email',
-            value: ''
-          }
+            channel: "email",
+            value: "",
+          },
         ];
         setNotificationHistory(mockHistory);
       }
@@ -169,7 +186,7 @@ export default function Notifications() {
   // Сохранение истории в localStorage
   const saveNotificationHistory = useCallback((history: any[]) => {
     try {
-      localStorage.setItem('notificationHistory', JSON.stringify(history));
+      localStorage.setItem("notificationHistory", JSON.stringify(history));
     } catch (err) {
       console.error("Ошибка сохранения истории:", err);
     }
@@ -189,7 +206,7 @@ export default function Notifications() {
 
   // Фокусировка на textarea при переходе в режим редактирования
   useEffect(() => {
-    if (isEditing === 'edit' && textareaRef.current) {
+    if (isEditing === "edit" && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(
         textareaRef.current.value.length,
@@ -218,20 +235,23 @@ export default function Notifications() {
     }
 
     setIsGenerating(true);
-    setIsEditing('view');
+    setIsEditing("view");
 
     try {
-      const activeTypes = settings.types.filter(type => 
-        ['value_reminder', 'mission_quote', 'team_shoutout'].includes(type)
+      const activeTypes = settings.types.filter((type) =>
+        ["value_reminder", "mission_quote", "team_shoutout"].includes(type)
       );
-      
-      const selectedType = activeTypes.length > 0 
-        ? activeTypes[Math.floor(Math.random() * activeTypes.length)]
-        : 'value_reminder';
-      
-      const availableValues = values.length > 0 ? values : [{ title: "Развитие", description: "" }];
-      const randomValue = availableValues[Math.floor(Math.random() * availableValues.length)];
-      
+
+      const selectedType =
+        activeTypes.length > 0
+          ? activeTypes[Math.floor(Math.random() * activeTypes.length)]
+          : "value_reminder";
+
+      const availableValues =
+        values.length > 0 ? values : [{ title: "Развитие", description: "" }];
+      const randomValue =
+        availableValues[Math.floor(Math.random() * availableValues.length)];
+
       setCurrentValue(randomValue);
 
       let generatedMessage: string;
@@ -241,145 +261,192 @@ export default function Notifications() {
           const response = await apiService.generateMessage({
             type: selectedType,
             valueTitle: randomValue.title,
-            mission: mission || "Мы создаем прекрасную корпоративную культуру вместе!",
+            mission:
+              mission || "Мы создаем прекрасную корпоративную культуру вместе!",
             tone: generationSettings.tone,
-            length: generationSettings.length
+            length: generationSettings.length,
           });
 
           if (response.success && response.data) {
             generatedMessage = response.data.message;
             success("✨ Сообщение создано нейросетью!");
           } else {
-            throw new Error(response.error || 'API returned unsuccessful response');
+            throw new Error(
+              response.error || "API returned unsuccessful response"
+            );
           }
         } catch (aiError: any) {
           console.error("AI generation failed, using template:", aiError);
-          generatedMessage = generateTemplateMessage(selectedType, randomValue.title, mission);
+          generatedMessage = generateTemplateMessage(
+            selectedType,
+            randomValue.title,
+            mission
+          );
           info("📝 Используем шаблонное сообщение");
         }
       } else {
-        generatedMessage = generateTemplateMessage(selectedType, randomValue.title, mission);
+        generatedMessage = generateTemplateMessage(
+          selectedType,
+          randomValue.title,
+          mission
+        );
         info("📝 Шаблонное сообщение создано");
       }
 
       setCurrentMessage(generatedMessage);
       setEditedMessage(generatedMessage);
-      
     } catch (err) {
       console.error("Ошибка генерации сообщения:", err);
       error("Ошибка генерации сообщения");
     } finally {
       setIsGenerating(false);
     }
-  }, [employees, settings.types, values, mission, generationSettings, success, error, info]);
+  }, [
+    employees,
+    settings.types,
+    values,
+    mission,
+    generationSettings,
+    success,
+    error,
+    info,
+  ]);
 
-  const generateTemplateMessage = useCallback((type: string, valueTitle: string, missionText?: string) => {
-    const template = FALLBACK_TEMPLATES[type as keyof typeof FALLBACK_TEMPLATES] || FALLBACK_TEMPLATES.value_reminder;
-    return template(valueTitle, missionText || "Мы создаем прекрасную корпоративную культуру вместе!");
-  }, []);
+  const generateTemplateMessage = useCallback(
+    (type: string, valueTitle: string, missionText?: string) => {
+      const template =
+        FALLBACK_TEMPLATES[type as keyof typeof FALLBACK_TEMPLATES] ||
+        FALLBACK_TEMPLATES.value_reminder;
+      return template(
+        valueTitle,
+        missionText || "Мы создаем прекрасную корпоративную культуру вместе!"
+      );
+    },
+    []
+  );
 
   // Редактирование с помощью нейросети
-  const editWithAI = useCallback(async (editType: AIEditType) => {
-    if (!editedMessage.trim()) {
-      error("Нет сообщения для редактирования");
-      return;
-    }
-
-    setIsAIEditing(true);
-
-    try {
-      let instruction = '';
-      
-      switch (editType) {
-        case 'improve':
-          instruction = 'Улучши текст, сделай его более выразительным и грамотным, сохранив исходный смысл и тон.';
-          break;
-        case 'shorten':
-          instruction = 'Сократи текст, оставив только самую суть, но сохранив основное сообщение.';
-          break;
-        case 'lengthen':
-          instruction = 'Расширь текст, добавь больше деталей и развернутых формулировок, сохранив основную мысль.';
-          break;
-        case 'formal':
-          instruction = 'Сделай текст более формальным и профессиональным, подходящим для деловой переписки.';
-          break;
-        case 'friendly':
-          instruction = 'Сделай текст более дружелюбным, теплым и неформальным.';
-          break;
-        case 'fix_grammar':
-          instruction = 'Исправь грамматические, пунктуационные и стилистические ошибки в тексте.';
-          break;
-        case 'rephrase':
-          instruction = 'Перефразируй текст, сохранив смысл, но изменив формулировки.';
-          break;
+  const editWithAI = useCallback(
+    async (editType: AIEditType) => {
+      if (!editedMessage.trim()) {
+        error("Нет сообщения для редактирования");
+        return;
       }
 
-      const response = await apiService.editMessage({
-        message: editedMessage,
-        instruction,
-        currentValue: currentValue.title,
-        currentMission: mission
-      });
+      setIsAIEditing(true);
 
-      if (response.success && response.data) {
-        setEditedMessage(response.data.message);
-        success(`✅ Сообщение отредактировано нейросетью!`);
-      } else {
-        throw new Error(response.error || 'API returned unsuccessful response');
+      try {
+        let instruction = "";
+
+        switch (editType) {
+          case "improve":
+            instruction =
+              "Улучши текст, сделай его более выразительным и грамотным, сохранив исходный смысл и тон.";
+            break;
+          case "shorten":
+            instruction =
+              "Сократи текст, оставив только самую суть, но сохранив основное сообщение.";
+            break;
+          case "lengthen":
+            instruction =
+              "Расширь текст, добавь больше деталей и развернутых формулировок, сохранив основную мысль.";
+            break;
+          case "formal":
+            instruction =
+              "Сделай текст более формальным и профессиональным, подходящим для деловой переписки.";
+            break;
+          case "friendly":
+            instruction =
+              "Сделай текст более дружелюбным, теплым и неформальным.";
+            break;
+          case "fix_grammar":
+            instruction =
+              "Исправь грамматические, пунктуационные и стилистические ошибки в тексте.";
+            break;
+          case "rephrase":
+            instruction =
+              "Перефразируй текст, сохранив смысл, но изменив формулировки.";
+            break;
+        }
+
+        const response = await apiService.editMessage({
+          message: editedMessage,
+          instruction,
+          currentValue: currentValue.title,
+          currentMission: mission,
+        });
+
+        if (response.success && response.data) {
+          setEditedMessage(response.data.message);
+          success(`✅ Сообщение отредактировано нейросетью!`);
+        } else {
+          throw new Error(
+            response.error || "API returned unsuccessful response"
+          );
+        }
+      } catch (err: any) {
+        console.error("AI edit error:", err);
+        error("Ошибка при редактировании нейросетью");
+      } finally {
+        setIsAIEditing(false);
       }
-    } catch (err: any) {
-      console.error("AI edit error:", err);
-      error("Ошибка при редактировании нейросетью");
-    } finally {
-      setIsAIEditing(false);
-    }
-  }, [editedMessage, currentValue.title, mission, success, error]);
+    },
+    [editedMessage, currentValue.title, mission, success, error]
+  );
 
   // Переключение режимов редактирования/просмотра
   const enterEditMode = useCallback(() => {
     setEditedMessage(currentMessage);
-    setIsEditing('edit');
+    setIsEditing("edit");
   }, [currentMessage]);
 
   const saveEdit = useCallback(() => {
     setCurrentMessage(editedMessage);
-    setIsEditing('view');
+    setIsEditing("view");
     success("✅ Сообщение сохранено");
   }, [editedMessage, success]);
 
   const cancelEdit = useCallback(() => {
     setEditedMessage(currentMessage);
-    setIsEditing('view');
+    setIsEditing("view");
   }, [currentMessage]);
 
   // Добавление уведомления в историю
-  const addToHistory = useCallback((notification: any) => {
-    const newNotification = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      ...notification
-    };
-    
-    setNotificationHistory(prev => {
-      const newHistory = [newNotification, ...prev];
-      saveNotificationHistory(newHistory);
-      return newHistory;
-    });
-  }, [saveNotificationHistory]);
+  const addToHistory = useCallback(
+    (notification: any) => {
+      const newNotification = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        ...notification,
+      };
+
+      setNotificationHistory((prev) => {
+        const newHistory = [newNotification, ...prev];
+        saveNotificationHistory(newHistory);
+        return newHistory;
+      });
+    },
+    [saveNotificationHistory]
+  );
 
   // Удаление уведомления из истории
-  const removeFromHistory = useCallback((id: string) => {
-    setNotificationHistory(prev => {
-      const newHistory = prev.filter(item => item.id !== id);
-      saveNotificationHistory(newHistory);
-      return newHistory;
-    });
-    success("Уведомление удалено из истории");
-  }, [saveNotificationHistory, success]);
+  const removeFromHistory = useCallback(
+    (id: string) => {
+      setNotificationHistory((prev) => {
+        const newHistory = prev.filter((item) => item.id !== id);
+        saveNotificationHistory(newHistory);
+        return newHistory;
+      });
+      success("Уведомление удалено из истории");
+    },
+    [saveNotificationHistory, success]
+  );
 
   // Очистка всей истории
   const clearHistory = useCallback(() => {
-    if (window.confirm("Вы уверены, что хотите очистить всю историю уведомлений?")) {
+    if (
+      window.confirm("Вы уверены, что хотите очистить всю историю уведомлений?")
+    ) {
       setNotificationHistory([]);
       saveNotificationHistory([]);
       success("История уведомлений очищена");
@@ -388,8 +455,8 @@ export default function Notifications() {
 
   // Отправка в Telegram
   const handleSendTelegram = async () => {
-    const messageToSend = isEditing === 'edit' ? editedMessage : currentMessage;
-    
+    const messageToSend = isEditing === "edit" ? editedMessage : currentMessage;
+
     if (!messageToSend) {
       error("Сначала сгенерируйте сообщение!");
       return;
@@ -406,14 +473,18 @@ export default function Notifications() {
     try {
       const telegramMessage = `📧 <b>Уведомление от CultureOS</b>\n\n${messageToSend}\n\n---\n<em>Это сообщение отправлено автоматически</em>`;
 
-      const response = await apiService.broadcastTelegramMessage(telegramMessage);
-      
+      const response = await apiService.broadcastTelegramMessage(
+        telegramMessage
+      );
+
       if (response.success && response.data) {
         const { successful, total } = response.data;
-        
+
         if (successful > 0) {
-          success(`✅ Сообщение отправлено ${successful} из ${total} подписчиков в Telegram`);
-          
+          success(
+            `✅ Сообщение отправлено ${successful} из ${total} подписчиков в Telegram`
+          );
+
           // Добавляем в историю
           addToHistory({
             type: "telegram_broadcast",
@@ -422,10 +493,10 @@ export default function Notifications() {
             status: "sent",
             recipients: total,
             successCount: successful,
-            channel: 'telegram',
-            value: currentValue.title
+            channel: "telegram",
+            value: currentValue.title,
           });
-          
+
           addNotification({
             type: "telegram_broadcast",
             message: `Telegram: "${currentValue.title}" (${successful}/${total} подписчиков)`,
@@ -447,8 +518,8 @@ export default function Notifications() {
 
   // Отправка email
   const handleSend = async () => {
-    const messageToSend = isEditing === 'edit' ? editedMessage : currentMessage;
-    
+    const messageToSend = isEditing === "edit" ? editedMessage : currentMessage;
+
     if (employees.length === 0) {
       error("Добавьте сотрудников!");
       return;
@@ -461,84 +532,118 @@ export default function Notifications() {
 
     setIsSending(true);
     setSendProgress(0);
-    let sentCount = 0;
-    let failedCount = 0;
 
     try {
-      for (let i = 0; i < employees.length; i++) {
-        const emp = employees[i];
-        
-        const personalizedMessage = messageToSend.replace(/Привет!|Добрый день!|Приветствую!/, `Привет, ${emp.name}!`);
-
-        const params = {
-          to_email: emp.email,
-          to_name: emp.name,
-          message: personalizedMessage,
-          value_title: currentValue.title,
-          mission: mission || "Мы создаем прекрасную корпоративную культуру вместе!",
-        };
-
-        try {
-          await emailjs.send(
-            EMAILJS_CONFIG.serviceID,
-            EMAILJS_CONFIG.templateID,
-            params
-          );
-          sentCount++;
-        } catch (err: any) {
-          console.error("Ошибка отправки на", emp.email, err.text || err);
-          failedCount++;
-        }
-
-        setSendProgress(((i + 1) / employees.length) * 100);
-      }
-
-      // Добавляем в историю
-      addToHistory({
-        type: "value_reminder",
-        title: `Рассылка: "${currentValue.title}"`,
+      const response = await apiService.sendMotivationalNotification({
+        employees: employees,
         message: messageToSend,
-        status: failedCount === 0 ? "sent" : "partial",
-        recipients: employees.length,
-        successCount: sentCount,
-        channel: 'email',
-        value: currentValue.title
-      });
-      
-      addNotification({
+        valueTitle: currentValue.title,
+        mission:
+          mission || "Мы создаем прекрасную корпоративную культуру вместе!",
         type: "value_reminder",
-        message: `Рассылка: "${currentValue.title}" (${sentCount} отправлено)`,
-        status: "sent",
+        subject: `CultureOS: ${currentValue.title}`,
+        personalization: true,
       });
 
-      if (failedCount === 0) {
-        success(`✅ Успешно отправлено ${sentCount} писем`);
+      if (response.success && response.data) {
+        const { results, notification } = response.data;
+
+        // Добавляем в историю
+        addToHistory({
+          type: "value_reminder",
+          title: `Рассылка: "${currentValue.title}"`,
+          message: messageToSend,
+          status: results.failed === 0 ? "sent" : "partial",
+          recipients: results.total,
+          successCount: results.sent,
+          channel: "email",
+          value: currentValue.title,
+        });
+
+        addNotification({
+          type: "value_reminder",
+          message: `Рассылка: "${currentValue.title}" (${results.sent} отправлено)`,
+          status: "sent",
+        });
+
+        if (results.failed === 0) {
+          success(`✅ Успешно отправлено ${results.sent} писем`);
+        } else {
+          info(`📨 Отправлено: ${results.sent}, Ошибок: ${results.failed}`);
+        }
       } else {
-        info(`📨 Отправлено: ${sentCount}, Ошибок: ${failedCount}`);
+        throw new Error(response.error || "Failed to send notifications");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Ошибка при отправке:", err);
-      error("Произошла ошибка при отправке");
+      error("Произошла ошибка при отправке: " + err.message);
     } finally {
       setIsSending(false);
     }
   };
 
+  // Функция для отправки всех активных обычных уведомлений через бэкенд
+  const handleSendAllActiveRegularNotifications = async () => {
+    const activeNotifications = regularNotifications.filter((n) => n.enabled);
+
+    if (activeNotifications.length === 0) {
+      error("Нет активных обычных уведомлений");
+      return;
+    }
+
+    if (employees.length === 0) {
+      error("Добавьте сотрудников!");
+      return;
+    }
+
+    setIsSendingRegular(true);
+    setSendProgress(0);
+
+    try {
+      const response = await apiService.sendRegularNotifications({
+        notifications: activeNotifications,
+        employees: employees,
+      });
+
+      if (response.success && response.data) {
+        const results = response.data;
+
+        if (results.sent > 0) {
+          success(
+            `✅ Отправлено ${results.totalNotifications} обычных уведомлений на ${employees.length} сотрудников`
+          );
+        } else {
+          error("Не удалось отправить ни одного уведомления");
+        }
+      } else {
+        throw new Error(
+          response.error || "Failed to send regular notifications"
+        );
+      }
+    } catch (err: any) {
+      console.error("Ошибка при массовой отправке:", err);
+      error("Произошла ошибка при отправке уведомлений: " + err.message);
+    } finally {
+      setIsSendingRegular(false);
+    }
+  };
   // Функция для отправки одного обычного уведомления
-  const sendSingleRegularNotification = async (notification: any): Promise<number> => {
+  const sendSingleRegularNotification = async (
+    notification: any
+  ): Promise<number> => {
     let sentCount = 0;
     let failedCount = 0;
 
     try {
       for (let i = 0; i < employees.length; i++) {
         const emp = employees[i];
-        
+
         const params = {
           to_email: emp.email,
           to_name: emp.name,
           message: `${notification.title}\n\n${notification.message}`,
           subject: notification.title,
-          type: 'regular_notification'
+          type: "regular_notification",
         };
 
         try {
@@ -562,8 +667,8 @@ export default function Notifications() {
         status: failedCount === 0 ? "sent" : "partial",
         recipients: employees.length,
         successCount: sentCount,
-        channel: 'email',
-        value: ''
+        channel: "email",
+        value: "",
       });
 
       addNotification({
@@ -574,58 +679,12 @@ export default function Notifications() {
 
       return sentCount;
     } catch (err) {
-      console.error("Ошибка при отправке уведомления:", notification.title, err);
+      console.error(
+        "Ошибка при отправке уведомления:",
+        notification.title,
+        err
+      );
       return 0;
-    }
-  };
-
-  // Функция для отправки всех активных обычных уведомлений
-  const handleSendAllActiveRegularNotifications = async () => {
-    const activeNotifications = regularNotifications.filter(n => n.enabled);
-    
-    if (activeNotifications.length === 0) {
-      error("Нет активных обычных уведомлений");
-      return;
-    }
-
-    if (employees.length === 0) {
-      error("Добавьте сотрудников!");
-      return;
-    }
-
-    setIsSendingRegular(true);
-    setSendProgress(0);
-    
-    let totalSent = 0;
-    let totalNotifications = activeNotifications.length;
-    
-    try {
-      for (let i = 0; i < totalNotifications; i++) {
-        const notification = activeNotifications[i];
-        
-        setSendProgress(((i) / totalNotifications) * 100);
-        
-        const sentCount = await sendSingleRegularNotification(notification);
-        totalSent += sentCount;
-        
-        if (i < totalNotifications - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-      
-      setSendProgress(100);
-      
-      if (totalSent > 0) {
-        success(`✅ Отправлено ${totalNotifications} обычных уведомлений на ${employees.length} сотрудников`);
-      } else {
-        error("Не удалось отправить ни одного уведомления");
-      }
-    } catch (err) {
-      console.error("Ошибка при массовой отправке:", err);
-      error("Произошла ошибка при отправке уведомлений");
-    } finally {
-      setIsSendingRegular(false);
-      setTimeout(() => setSendProgress(0), 1000);
     }
   };
 
@@ -643,49 +702,60 @@ export default function Notifications() {
     } else if (diffHours < 24) {
       return `${diffHours} ч. назад`;
     } else if (diffDays === 1) {
-      return 'Вчера';
+      return "Вчера";
     } else if (diffDays < 7) {
       return `${diffDays} дн. назад`;
     } else {
-      return date.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
+      return date.toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
       });
     }
   };
 
   // Получение иконки для типа уведомления
   const getNotificationIcon = (type: string, channel: string) => {
-    if (channel === 'telegram') return <MessageCircle className="w-4 h-4 text-blue-500" />;
-    if (type === 'regular_notification') return <Bell className="w-4 h-4 text-orange-500" />;
+    if (channel === "telegram")
+      return <MessageCircle className="w-4 h-4 text-blue-500" />;
+    if (type === "regular_notification")
+      return <Bell className="w-4 h-4 text-orange-500" />;
     return <Sparkles className="w-4 h-4 text-purple-500" />;
   };
 
   // Получение цвета статуса
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'sent': return 'bg-green-100 text-green-800';
-      case 'partial': return 'bg-yellow-100 text-yellow-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "sent":
+        return "bg-green-100 text-green-800";
+      case "partial":
+        return "bg-yellow-100 text-yellow-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   // Получение текста статуса
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'sent': return 'Отправлено';
-      case 'partial': return 'Частично';
-      case 'failed': return 'Ошибка';
-      default: return status;
+      case "sent":
+        return "Отправлено";
+      case "partial":
+        return "Частично";
+      case "failed":
+        return "Ошибка";
+      default:
+        return status;
     }
   };
 
   // Фильтрация истории
-  const filteredHistory = historyFilter === 'all' 
-    ? notificationHistory 
-    : notificationHistory.filter(item => item.channel === historyFilter);
+  const filteredHistory =
+    historyFilter === "all"
+      ? notificationHistory
+      : notificationHistory.filter((item) => item.channel === historyFilter);
 
   const preview = currentMessage || "Сгенерируйте первое сообщение...";
 
@@ -694,22 +764,22 @@ export default function Notifications() {
       {/* Переключение вкладок */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => setActiveTab('motivational')}
+          onClick={() => setActiveTab("motivational")}
           className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-medium text-sm ${
-            activeTab === 'motivational'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+            activeTab === "motivational"
+              ? "border-primary text-primary"
+              : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
           <Sparkles className="w-4 h-4" />
           <span>Мотивационные</span>
         </button>
         <button
-          onClick={() => setActiveTab('regular')}
+          onClick={() => setActiveTab("regular")}
           className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-medium text-sm ${
-            activeTab === 'regular'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+            activeTab === "regular"
+              ? "border-primary text-primary"
+              : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
           <Bell className="w-4 h-4" />
@@ -717,7 +787,7 @@ export default function Notifications() {
         </button>
       </div>
 
-      {activeTab === 'motivational' ? (
+      {activeTab === "motivational" ? (
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Левая панель: Настройки мотивационных уведомлений */}
           <div className="lg:col-span-1 space-y-6">
@@ -725,13 +795,20 @@ export default function Notifications() {
               <h2 className="text-xl font-bold mb-4">Настройки</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Частота</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Частота
+                  </label>
                   <select
                     value={settings.frequency}
-                    onChange={(e) => updateSettings({
-                      frequency: e.target.value as 'daily' | 'weekly' | 'monthly',
-                      types: settings.types
-                    })}
+                    onChange={(e) =>
+                      updateSettings({
+                        frequency: e.target.value as
+                          | "daily"
+                          | "weekly"
+                          | "monthly",
+                        types: settings.types,
+                      })
+                    }
                     className="input"
                   >
                     <option value="daily">Ежедневно</option>
@@ -757,19 +834,23 @@ export default function Notifications() {
                               const checked = e.target.checked;
                               const newTypes = checked
                                 ? [...settings.types, type]
-                                : settings.types.filter((t: string) => t !== type);
+                                : settings.types.filter(
+                                    (t: string) => t !== type
+                                  );
 
                               updateSettings({
                                 frequency: settings.frequency,
-                                types: newTypes
+                                types: newTypes,
                               });
                             }}
                             className="w-4 h-4 text-primary rounded"
                           />
                           <span className="text-sm">
-                            {type === "value_reminder" && "Напоминание о ценности"}
+                            {type === "value_reminder" &&
+                              "Напоминание о ценности"}
                             {type === "mission_quote" && "Цитата из миссии"}
-                            {type === "team_shoutout" && "Благодарность команде"}
+                            {type === "team_shoutout" &&
+                              "Благодарность команде"}
                           </span>
                         </label>
                       )
@@ -798,17 +879,21 @@ export default function Notifications() {
                       <input
                         type="checkbox"
                         checked={generationSettings.useAI}
-                        onChange={(e) => setGenerationSettings({
-                          ...generationSettings,
-                          useAI: e.target.checked
-                        })}
+                        onChange={(e) =>
+                          setGenerationSettings({
+                            ...generationSettings,
+                            useAI: e.target.checked,
+                          })
+                        }
                         className="w-4 h-4 text-primary rounded"
                       />
-                      <span className="text-sm font-medium">Использовать нейросеть (GigaChat)</span>
+                      <span className="text-sm font-medium">
+                        Использовать нейросеть (GigaChat)
+                      </span>
                     </label>
                     <p className="text-xs text-gray-500 mt-1">
-                      {generationSettings.useAI 
-                        ? "Сообщения создаются искусственным интеллектом" 
+                      {generationSettings.useAI
+                        ? "Сообщения создаются искусственным интеллектом"
                         : "Используются шаблонные сообщения"}
                     </p>
                   </div>
@@ -816,13 +901,17 @@ export default function Notifications() {
                   {generationSettings.useAI && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Тон сообщения</label>
+                        <label className="block text-sm font-medium mb-2">
+                          Тон сообщения
+                        </label>
                         <select
                           value={generationSettings.tone}
-                          onChange={(e) => setGenerationSettings({
-                            ...generationSettings,
-                            tone: e.target.value as any
-                          })}
+                          onChange={(e) =>
+                            setGenerationSettings({
+                              ...generationSettings,
+                              tone: e.target.value as any,
+                            })
+                          }
                           className="input text-sm"
                         >
                           <option value="friendly">Дружелюбный</option>
@@ -833,13 +922,17 @@ export default function Notifications() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium mb-2">Длина сообщения</label>
+                        <label className="block text-sm font-medium mb-2">
+                          Длина сообщения
+                        </label>
                         <select
                           value={generationSettings.length}
-                          onChange={(e) => setGenerationSettings({
-                            ...generationSettings,
-                            length: e.target.value as any
-                          })}
+                          onChange={(e) =>
+                            setGenerationSettings({
+                              ...generationSettings,
+                              length: e.target.value as any,
+                            })
+                          }
                           className="input text-sm"
                         >
                           <option value="short">Короткое</option>
@@ -868,7 +961,9 @@ export default function Notifications() {
                     <>
                       <RefreshCw className="w-4 h-4" />
                       <span>
-                        {generationSettings.useAI ? "Сгенерировать нейросетью" : "Новое сообщение"}
+                        {generationSettings.useAI
+                          ? "Сгенерировать нейросетью"
+                          : "Новое сообщение"}
                       </span>
                     </>
                   )}
@@ -876,7 +971,9 @@ export default function Notifications() {
 
                 <button
                   onClick={handleSend}
-                  disabled={isSending || employees.length === 0 || !currentMessage}
+                  disabled={
+                    isSending || employees.length === 0 || !currentMessage
+                  }
                   className="w-full btn-primary text-lg flex items-center justify-center space-x-2 disabled:opacity-50"
                 >
                   {isSending ? (
@@ -895,7 +992,11 @@ export default function Notifications() {
                 {/* КНОПКА ДЛЯ TELEGRAM */}
                 <button
                   onClick={handleSendTelegram}
-                  disabled={isSendingTelegram || !currentMessage || telegramSubscribers === 0}
+                  disabled={
+                    isSendingTelegram ||
+                    !currentMessage ||
+                    telegramSubscribers === 0
+                  }
                   className="w-full bg-telegram-500 hover:bg-telegram-600 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 disabled:opacity-50 transition-all duration-200"
                 >
                   {isSendingTelegram ? (
@@ -906,7 +1007,9 @@ export default function Notifications() {
                   ) : (
                     <>
                       <MessageCircle className="w-5 h-5" />
-                      <span>Отправить в Telegram ({telegramSubscribers} подписчиков)</span>
+                      <span>
+                        Отправить в Telegram ({telegramSubscribers} подписчиков)
+                      </span>
                     </>
                   )}
                 </button>
@@ -917,9 +1020,11 @@ export default function Notifications() {
             <div className="card bg-telegram-50 border-telegram-200">
               <div className="flex items-center space-x-3 mb-3">
                 <MessageCircle className="w-6 h-6 text-telegram-600" />
-                <h3 className="font-semibold text-telegram-800">Telegram Бот</h3>
+                <h3 className="font-semibold text-telegram-800">
+                  Telegram Бот
+                </h3>
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-telegram-700">Подписчиков:</span>
@@ -927,11 +1032,11 @@ export default function Notifications() {
                     {telegramSubscribers}
                   </span>
                 </div>
-                
+
                 <div className="text-xs text-telegram-600">
                   Сотрудники могут подписаться отправив <code>/start</code> боту
                 </div>
-                
+
                 <button
                   onClick={loadTelegramStatus}
                   className="w-full mt-2 text-xs bg-telegram-100 hover:bg-telegram-200 text-telegram-700 py-1 px-2 rounded transition-colors"
@@ -978,12 +1083,12 @@ export default function Notifications() {
               </div>
 
               {/* РЕЖИМ РЕДАКТИРОВАНИЯ */}
-              {isEditing === 'edit' ? (
+              {isEditing === "edit" ? (
                 <div className="space-y-4">
                   {/* Панель инструментов редактирования */}
                   <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
                     <button
-                      onClick={() => editWithAI('improve')}
+                      onClick={() => editWithAI("improve")}
                       disabled={isAIEditing}
                       className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -991,7 +1096,7 @@ export default function Notifications() {
                       <span>Улучшить текст</span>
                     </button>
                     <button
-                      onClick={() => editWithAI('shorten')}
+                      onClick={() => editWithAI("shorten")}
                       disabled={isAIEditing}
                       className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -999,7 +1104,7 @@ export default function Notifications() {
                       <span>Сократить</span>
                     </button>
                     <button
-                      onClick={() => editWithAI('lengthen')}
+                      onClick={() => editWithAI("lengthen")}
                       disabled={isAIEditing}
                       className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -1007,7 +1112,7 @@ export default function Notifications() {
                       <span>Расширить</span>
                     </button>
                     <button
-                      onClick={() => editWithAI('formal')}
+                      onClick={() => editWithAI("formal")}
                       disabled={isAIEditing}
                       className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -1015,7 +1120,7 @@ export default function Notifications() {
                       <span>Сделать формальным</span>
                     </button>
                     <button
-                      onClick={() => editWithAI('friendly')}
+                      onClick={() => editWithAI("friendly")}
                       disabled={isAIEditing}
                       className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -1028,7 +1133,9 @@ export default function Notifications() {
                   {isAIEditing && (
                     <div className="flex items-center justify-center py-2 bg-blue-50 rounded-lg">
                       <Loader2 className="w-4 h-4 animate-spin text-blue-600 mr-2" />
-                      <span className="text-sm text-blue-600">Нейросеть редактирует сообщение...</span>
+                      <span className="text-sm text-blue-600">
+                        Нейросеть редактирует сообщение...
+                      </span>
                     </div>
                   )}
 
@@ -1101,16 +1208,20 @@ export default function Notifications() {
                     <option value="email">Email</option>
                     <option value="telegram">Telegram</option>
                   </select>
-                  
+
                   <button
                     onClick={loadNotificationHistory}
                     disabled={isLoadingHistory}
                     className="flex items-center space-x-1 text-sm text-gray-600 hover:text-primary disabled:opacity-50 p-1"
                     title="Обновить историю"
                   >
-                    <RefreshCw className={`w-4 h-4 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`w-4 h-4 ${
+                        isLoadingHistory ? "animate-spin" : ""
+                      }`}
+                    />
                   </button>
-                  
+
                   {notificationHistory.length > 0 && (
                     <button
                       onClick={clearHistory}
@@ -1143,7 +1254,10 @@ export default function Notifications() {
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-3 flex-1">
-                          {getNotificationIcon(notification.type, notification.channel)}
+                          {getNotificationIcon(
+                            notification.type,
+                            notification.channel
+                          )}
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-gray-900 truncate">
                               {notification.title}
@@ -1151,16 +1265,21 @@ export default function Notifications() {
                             <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1 flex-wrap">
                               <Calendar className="w-3 h-3 flex-shrink-0" />
                               <span>{formatDate(notification.date)}</span>
-                              {notification.channel === 'email' && (
+                              {notification.channel === "email" && (
                                 <>
                                   <Mail className="w-3 h-3 flex-shrink-0" />
-                                  <span>{notification.successCount}/{notification.recipients} отправлено</span>
+                                  <span>
+                                    {notification.successCount}/
+                                    {notification.recipients} отправлено
+                                  </span>
                                 </>
                               )}
-                              {notification.channel === 'telegram' && (
+                              {notification.channel === "telegram" && (
                                 <>
                                   <MessageCircle className="w-3 h-3 flex-shrink-0" />
-                                  <span>{notification.successCount} подписчиков</span>
+                                  <span>
+                                    {notification.successCount} подписчиков
+                                  </span>
                                 </>
                               )}
                               {notification.value && (
@@ -1172,7 +1291,11 @@ export default function Notifications() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                              notification.status
+                            )}`}
+                          >
                             {getStatusText(notification.status)}
                           </span>
                           <button
@@ -1184,27 +1307,42 @@ export default function Notifications() {
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* Прогресс-бар для email рассылок */}
-                      {notification.channel === 'email' && notification.recipients > 0 && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-xs text-gray-500 mb-1">
-                            <span>Доставка</span>
-                            <span>{Math.round((notification.successCount / notification.recipients) * 100)}%</span>
+                      {notification.channel === "email" &&
+                        notification.recipients > 0 && (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Доставка</span>
+                              <span>
+                                {Math.round(
+                                  (notification.successCount /
+                                    notification.recipients) *
+                                    100
+                                )}
+                                %
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                  notification.successCount ===
+                                  notification.recipients
+                                    ? "bg-green-500"
+                                    : "bg-yellow-500"
+                                }`}
+                                style={{
+                                  width: `${
+                                    (notification.successCount /
+                                      notification.recipients) *
+                                    100
+                                  }%`,
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                            <div
-                              className={`h-1.5 rounded-full transition-all duration-300 ${
-                                notification.successCount === notification.recipients 
-                                  ? 'bg-green-500' 
-                                  : 'bg-yellow-500'
-                              }`}
-                              style={{ width: `${(notification.successCount / notification.recipients) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      
+                        )}
+
                       {/* Превью сообщения (раскрывающееся) */}
                       <details className="mt-3">
                         <summary className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer">
@@ -1224,7 +1362,11 @@ export default function Notifications() {
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Всего рассылок: {filteredHistory.length}</span>
                     <span>
-                      Успешно: {filteredHistory.filter(n => n.status === 'sent').length}
+                      Успешно:{" "}
+                      {
+                        filteredHistory.filter((n) => n.status === "sent")
+                          .length
+                      }
                     </span>
                   </div>
                 </div>
@@ -1235,19 +1377,24 @@ export default function Notifications() {
       ) : (
         <div className="space-y-6">
           <RegularNotificationsManager />
-          
+
           {/* Кнопка отправки всех активных обычных уведомлений */}
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Массовая отправка</h3>
                 <p className="text-sm text-gray-600">
-                  Отправить все активные обычные уведомления ({regularNotifications.filter(n => n.enabled).length} шт.)
+                  Отправить все активные обычные уведомления (
+                  {regularNotifications.filter((n) => n.enabled).length} шт.)
                 </p>
               </div>
               <button
                 onClick={handleSendAllActiveRegularNotifications}
-                disabled={isSendingRegular || regularNotifications.filter(n => n.enabled).length === 0 || employees.length === 0}
+                disabled={
+                  isSendingRegular ||
+                  regularNotifications.filter((n) => n.enabled).length === 0 ||
+                  employees.length === 0
+                }
                 className="btn-primary flex items-center space-x-2 disabled:opacity-50"
               >
                 {isSendingRegular ? (
@@ -1269,10 +1416,12 @@ export default function Notifications() {
               <div className="mt-4 bg-gray-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">
-                    Отправка обычных уведомлений... ({Math.round(sendProgress)}%)
+                    Отправка обычных уведомлений... ({Math.round(sendProgress)}
+                    %)
                   </span>
                   <span className="text-sm text-primary">
-                    {regularNotifications.filter(n => n.enabled).length} уведомлений
+                    {regularNotifications.filter((n) => n.enabled).length}{" "}
+                    уведомлений
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

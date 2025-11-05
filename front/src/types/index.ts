@@ -79,16 +79,16 @@ export type UpdateSettingsRequest = {
 };
 
 // Типы для обычных уведомлений
-export type RegularNotification = {
-  id: string;
-  type: 'lunch' | 'meeting' | 'reminder' | 'announcement' | 'custom';
-  title: string;
-  message: string;
-  time: string; // HH:mm format
-  days: number[]; // 0-6 (Sunday-Saturday)
-  enabled: boolean;
-  recipients: string[]; // employee emails or 'all'
-};
+// export type RegularNotification = {
+//   id: string;
+//   type: 'lunch' | 'meeting' | 'reminder' | 'announcement' | 'custom';
+//   title: string;
+//   message: string;
+//   time: string; // HH:mm format
+//   days: number[]; // 0-6 (Sunday-Saturday)
+//   enabled: boolean;
+//   recipients: string[]; // employee emails or 'all'
+// };
 
 // Расширенные типы для AppState
 export type AppState = {
@@ -182,11 +182,26 @@ export type UIStoreState = {
   closeModal: (modalName: string) => void;
 };
 
+export interface RegularNotification {
+  id: string;
+  title: string;
+  message: string;
+  schedule: 'daily' | 'weekly' | 'monthly' | 'manual';
+  enabled: boolean;
+  time?: string; // Время отправки в формате "HH:MM"
+  dayOfWeek?: number; // 0-6 для дней недели (0 - воскресенье)
+  dayOfMonth?: number; // 1-31 для дня месяца
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Типы для локального хранилища (обычные уведомления)
-export type LocalStoreState = {
+export interface LocalStore {
   regularNotifications: RegularNotification[];
-  addRegularNotification: (notification: Omit<RegularNotification, 'id'>) => void;
+  addRegularNotification: (notification: Omit<RegularNotification, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateRegularNotification: (id: string, updates: Partial<RegularNotification>) => void;
   deleteRegularNotification: (id: string) => void;
   toggleRegularNotification: (id: string) => void;
-};
+  getActiveRegularNotifications: () => RegularNotification[];
+}
+
